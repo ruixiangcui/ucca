@@ -1,3 +1,5 @@
+import string
+
 from ucca import layer0, layer1
 from ucca.layer0 import NodeTags as L0Tags
 from ucca.layer1 import EdgeTags as ETags, NodeTags as L1Tags
@@ -44,6 +46,10 @@ class NodeValidator:
         self.outgoing_tags = set(self.outgoing)
 
     def validate_terminal(self):
+        if not self.node.text:
+            yield "Empty terminal text (%s)" % self.node.ID
+        if set(self.node.text).intersection(string.whitespace):
+            yield "Whitespace in terminal text (%s): '%s'" % (self.node.ID, self.node)
         if not self.incoming:
             yield "Orphan %s terminal (%s) '%s'" % (self.node.tag, self.node.ID, self.node)
         elif len(self.node.incoming) > 1:
@@ -85,7 +91,7 @@ class NodeValidator:
         elif self.node.tag in (L1Tags.Foundational, L1Tags.Linkage, L1Tags.Punctuation) and \
                 all(e.attrib.get("remote") for e in self.node):
             yield "Non-implicit node (%s) with no primary children" % (self.node.ID)
-        for tag in (ETags.Function, ETags.Ground, ETags.ParallelScene, ETags.Linker, ETags.LinkRelation,
+        for tag in (ETags.Function, ETags.ParallelScene, ETags.Linker, ETags.LinkRelation,
                     ETags.Connector, ETags.Punctuation, ETags.Terminal):
             s = self.incoming.get(tag, ())
             if len(s) > 1:
@@ -97,7 +103,7 @@ class NodeValidator:
         if ETags.Function in self.incoming:
             s = self.outgoing_tags.difference((ETags.Terminal, ETags.Punctuation))
             if s:
-                yield "%s node (%s) with outgoing %s edge" % (ETags.Function, self.node.ID, join(s))
+                yield "%s node (%s) with outgoing %s edge: %s" % (ETags.Function, self.node.ID, join(s), self.node)
         if ETags.Linker in self.incoming_tags and linkage and ETags.LinkRelation not in self.incoming_tags:
             yield "%s node (%s) with no incoming %s" % (ETags.Linker, self.node.ID, ETags.LinkRelation)
 
@@ -112,7 +118,7 @@ class NodeValidator:
 
     def validate_foundational(self):
         if self.node.participants and not self.node.is_scene():
-            yield "Node (%s) with participants but without main relation" % self.node.ID
+            yield "Node (%s) with participants but without main relation: %s" % (self.node.ID, self.node)
         if self.node.process and self.node.state:
             yield "Node (%s) with both process (%s) and state (%s)" % (self.node.ID, self.node.process, self.node.state)
         if self.node.parallel_scenes:

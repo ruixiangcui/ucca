@@ -116,7 +116,9 @@ class Evaluator:
         :param r: reference passage for fine-grained evaluation
         :returns EvaluatorResults object if self.fscore is True, otherwise None
         """
-        reference_yield_tags = None if r is None else create_passage_yields(r)[ALL_EDGES.name]
+        self.mutual.clear()
+        self.error_counters.clear()
+        reference_yield_tags = None if r is None else create_passage_yields(r, punct=True)[ALL_EDGES.name]
         maps = [{}, create_passage_yields(p2, self.constructions,
                                           reference_yield_tags=reference_yield_tags)]
         if p1 is not None:
@@ -210,7 +212,7 @@ class Scores:
         return ["%.3f" % float(getattr(x, y)) for x in e.results.values() for y in ("p", "r", "f1")]
 
     def titles(self, eval_type=LABELED):
-        return self.field_titles(self[eval_type].results.keys())
+        return self.field_titles(self[eval_type].results.keys(), eval_type=eval_type)
 
     @staticmethod
     def field_titles(constructions=DEFAULT, eval_type=LABELED):
@@ -275,7 +277,7 @@ class EvaluatorResults:
         return SummaryStatistics.aggregate([self[c] for c in self.default.values()])
 
     def __bool__(self):
-        return bool(self.results)
+        return bool(self.results and any(self.results.values()))
 
     def __getitem__(self, construction):
         return self.results.get(construction, SummaryStatistics(0, 0, 0, Counter()))
@@ -306,8 +308,11 @@ class SummaryStatistics:
         """
         return SummaryStatistics(*map(sum, [map(attrgetter(attr), stats)
                                             for attr in ("num_matches", "num_only_guessed", "num_only_ref")]),
-                                 Counter({k: sum(s.errors.get(k, 0) for s in stats)
+                                 Counter({k: sum((s.errors or {}).get(k, 0) for s in stats)
                                           for k in set.union(*[set(s.errors or ()) for s in stats])}))
+
+    def __bool__(self):
+        return bool(self.num_matches or self.num_only_guessed or self.num_only_ref or self.errors)
 
 
 def evaluate(guessed, ref, converter=None, verbose=False, constructions=DEFAULT,
