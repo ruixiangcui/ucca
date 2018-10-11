@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+import sys
+
 import argparse
 import re
-import sys
 from glob import glob
 
 from ucca.convert import to_json, from_text
@@ -16,8 +17,10 @@ desc = """Upload passages from CoNLL-U files including complete tokenization, an
 
 
 class ConlluPassageUploader(ServerAccessor):
-    def __init__(self, user_id, annotation_user_id, **kwargs):
+    def __init__(self, user_id, annotation_user_id, source_id, project_id, **kwargs):
         super().__init__(**kwargs)
+        self.set_source(source_id)
+        self.set_project(project_id)
         self.set_user(user_id)
         self.annotation_user = dict(id=annotation_user_id) if annotation_user_id else self.user
         
@@ -70,6 +73,8 @@ class ConlluPassageUploader(ServerAccessor):
     @staticmethod
     def add_arguments(argparser):
         argparser.add_argument("filenames", nargs="+", help="filename pattern of CoNLL-U files")
+        ServerAccessor.add_project_id_argument(argparser)
+        ServerAccessor.add_source_id_argument(argparser)
         ServerAccessor.add_user_id_argument(argparser)
         argparser.add_argument("--annotation-user-id", type=int, help="user id for annotation tasks, if different")
         ServerAccessor.add_arguments(argparser)

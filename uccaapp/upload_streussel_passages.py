@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import argparse
 import sys
+
+import argparse
 
 from ucca.convert import from_text, to_json
 from uccaapp.api import ServerAccessor
@@ -9,8 +10,10 @@ desc = """Upload a passage from a streussel format file"""
 
 
 class StreusselPassageUploader(ServerAccessor):
-    def __init__(self, user_id, **kwargs):
+    def __init__(self, user_id, source_id, project_id, **kwargs):
         super().__init__(**kwargs)
+        self.set_source(source_id)
+        self.set_project(project_id)
         self.set_user(user_id)
         
     def upload_streussel_passage_file(self, filenames, **kwargs):
@@ -51,6 +54,8 @@ class StreusselPassageUploader(ServerAccessor):
     @staticmethod
     def add_arguments(argparser):
         argparser.add_argument("filenames", help="passage file names to convert and upload")
+        ServerAccessor.add_project_id_argument(argparser)
+        ServerAccessor.add_source_id_argument(argparser)
         ServerAccessor.add_user_id_argument(argparser)
         ServerAccessor.add_arguments(argparser)
 

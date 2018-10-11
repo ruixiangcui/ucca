@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-import argparse
 import sys
-from glob import glob
 
+import argparse
+from glob import glob
 from requests.exceptions import HTTPError
 
 from ucca.convert import to_json, to_text
@@ -28,8 +28,10 @@ desc = """Convert a passage file to JSON format and upload to UCCA-App as a comp
 
 
 class TaskUploader(ServerAccessor):
-    def __init__(self, user_id, **kwargs):
+    def __init__(self, user_id, source_id, project_id, **kwargs):
         super().__init__(**kwargs)
+        self.set_source(source_id)
+        self.set_project(project_id)
         self.set_user(user_id)
         
     def upload_tasks(self, filenames, **kwargs):
@@ -67,6 +69,8 @@ class TaskUploader(ServerAccessor):
     @staticmethod
     def add_arguments(argparser):
         argparser.add_argument("filenames", nargs="+", help="passage file names to convert and upload")
+        ServerAccessor.add_project_id_argument(argparser)
+        ServerAccessor.add_source_id_argument(argparser)
         ServerAccessor.add_user_id_argument(argparser)
         ServerAccessor.add_arguments(argparser)
 

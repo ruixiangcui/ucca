@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import argparse
 import sys
+
+import argparse
 
 from uccaapp.api import ServerAccessor
 
@@ -8,8 +9,10 @@ desc = """Upload a list of tokenization tasks to a project"""
 
 
 class TokenizationTaskCreator(ServerAccessor):
-    def __init__(self, user_id, **kwargs):
+    def __init__(self, user_id, source_id, project_id, **kwargs):
         super().__init__(**kwargs)
+        self.set_source(source_id)
+        self.set_project(project_id)
         self.set_user(user_id)
 
     def create_task(self, filename, **kwargs):
@@ -37,6 +40,8 @@ class TokenizationTaskCreator(ServerAccessor):
     @staticmethod
     def add_arguments(argparser):
         argparser.add_argument("filename", help="a file where each line is a <User ID> <Passage ID>")
+        ServerAccessor.add_project_id_argument(argparser)
+        ServerAccessor.add_source_id_argument(argparser)
         ServerAccessor.add_user_id_argument(argparser)
         ServerAccessor.add_arguments(argparser)
 

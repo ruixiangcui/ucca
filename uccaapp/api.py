@@ -23,7 +23,7 @@ RETRY_WAIT_DURATION = 60
 
 
 class ServerAccessor:
-    def __init__(self, server_address, email, password, auth_token, project_id, source_id, verbose, **kwargs):
+    def __init__(self, server_address, email, password, auth_token=None, verbose=False, **kwargs):
         if verbose:
             logging.basicConfig(level=logging.DEBUG)
         server_address = server_address or os.environ.get(SERVER_ADDRESS_ENV_VAR, DEFAULT_SERVER)
@@ -32,10 +32,14 @@ class ServerAccessor:
         token = auth_token or os.environ.get(AUTH_TOKEN_ENV_VAR) or self.login(
             email or os.environ[EMAIL_ENV_VAR], password or os.environ[PASSWORD_ENV_VAR])["token"]
         self.headers["Authorization"] = "Token " + token
+        self.source = self.project = self.layer = self.user = None
+
+    def set_source(self, source_id=None):
         self.source = self.get_source(source_id or int(os.environ[SOURCE_ID_ENV_VAR]))
+
+    def set_project(self, project_id=None):
         self.project = self.get_project(project_id or int(os.environ[PROJECT_ID_ENV_VAR]))
         self.layer = self.get_layer(self.project["layer"]["id"])
-        self.user = None
 
     def set_user(self, user_id=None):
         self.user = dict(id=user_id or int(os.environ[USER_ID_ENV_VAR]))
@@ -47,9 +51,15 @@ class ServerAccessor:
         argparser.add_argument("--password", help="UCCA-App password, otherwise set by " + PASSWORD_ENV_VAR)
         argparser.add_argument("--auth-token", help="authorization token (required only if email or password missing), "
                                                     "otherwise set by " + AUTH_TOKEN_ENV_VAR)
-        argparser.add_argument("--project-id", type=int, help="project id, otherwise set by " + PROJECT_ID_ENV_VAR)
-        argparser.add_argument("--source-id", type=int, help="source id, otherwise set by " + SOURCE_ID_ENV_VAR)
         argparser.add_argument("-v", "--verbose", action="store_true", help="detailed output")
+
+    @staticmethod
+    def add_source_id_argument(argparser):
+        argparser.add_argument("--source-id", type=int, help="source id, otherwise set by " + SOURCE_ID_ENV_VAR)
+
+    @staticmethod
+    def add_project_id_argument(argparser):
+        argparser.add_argument("--project-id", type=int, help="project id, otherwise set by " + PROJECT_ID_ENV_VAR)
 
     @staticmethod
     def add_user_id_argument(argparser):
@@ -85,6 +95,18 @@ class ServerAccessor:
         layer_out = self.request("get", "layers/%d/" % layer_id).json()
         logging.debug("Got layer: " + json.dumps(layer_out))
         return layer_out
+
+    def get_category(self, category_id):
+        logging.debug("Getting category %d" % category_id)
+        category_out = self.request("get", "categories/%d/" % category_id).json()
+        logging.debug("Got category: " + json.dumps(category_out))
+        return category_out
+
+    def create_category(self, **kwargs):
+        logging.debug("Creating category: " + json.dumps(kwargs))
+        category_out = self.request("post", "categories/", json=kwargs).json()
+        logging.debug("Created category: " + json.dumps(category_out))
+        return category_out
 
     def get_user(self, user_id):
         logging.debug("Getting user "+user_id)
