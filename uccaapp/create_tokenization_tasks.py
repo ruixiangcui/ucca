@@ -9,27 +9,27 @@ desc = """Upload a list of tokenization tasks to a project"""
 
 
 class TokenizationTaskCreator(ServerAccessor):
-    def __init__(self, user_id, source_id, project_id, **kwargs):
+    def __init__(self, source_id, project_id, **kwargs):
         super().__init__(**kwargs)
         self.set_source(source_id)
         self.set_project(project_id)
-        self.set_user(user_id)
 
     def create_task(self, filename, **kwargs):
         del kwargs
         with open(filename, encoding="utf-8") as f:
             num = 0
             for line in f:
-                fields = line.strip().split()
+                line = line.strip()
+                fields = line.split()
                 if len(fields) != 2:
-                    sys.stderr.write("Error in line: "+line.strip())
+                    print("Error in line: '%s'" % line, file=sys.stderr)
                     continue
-                user_id = fields[0]
-                user_obj = self.get_user(user_id)
-                passage_obj = self.get_passage(fields[1])
+                user_id, passage_id = fields
+                user = self.get_user(user_id)
+                passage = self.get_passage(passage_id)
                 task_in = dict(type="TOKENIZATION", status="NOT_STARTED", project=self.project,
-                               user=user_obj, passage=passage_obj,
-                               manager_comment="passage #%s" % passage_obj["id"],
+                               user=user, passage=passage,
+                               manager_comment="passage #%s" % passage["id"],
                                user_comment="", parent=None,
                                is_demo=False, is_active=True)
                 tok_task_out = self.create_tokenization_task(**task_in)
@@ -42,7 +42,6 @@ class TokenizationTaskCreator(ServerAccessor):
         argparser.add_argument("filename", help="a file where each line is a <User ID> <Passage ID>")
         ServerAccessor.add_project_id_argument(argparser)
         ServerAccessor.add_source_id_argument(argparser)
-        ServerAccessor.add_user_id_argument(argparser)
         ServerAccessor.add_arguments(argparser)
 
 

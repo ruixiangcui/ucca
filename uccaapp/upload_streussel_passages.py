@@ -15,7 +15,7 @@ class StreusselPassageUploader(ServerAccessor):
         self.set_source(source_id)
         self.set_project(project_id)
         self.set_user(user_id)
-        
+
     def upload_streussel_passage_file(self, filenames, **kwargs):
         del kwargs
         with open(filenames) as f_all:
@@ -31,7 +31,7 @@ class StreusselPassageUploader(ServerAccessor):
                         elif line.startswith("#"):
                             fields = line.split()
                             if len(fields) != 4 or fields[1] != "sent_id":
-                                print("FORMAT ERROR in "+filename, file=sys.stderr)
+                                print("FORMAT ERROR in " + filename, file=sys.stderr)
                             else:
                                 external_id = fields[3].split("-")[1]
                         else:
@@ -39,17 +39,16 @@ class StreusselPassageUploader(ServerAccessor):
                 passage_out = self.create_passage(text=passage_text.strip(), external_id=external_id, type="PUBLIC",
                                                   source=self.source)
                 task_in = dict(type="TOKENIZATION", status="SUBMITTED", project=self.project,
-                               user=self.user, passage=passage_out, manager_comment="External ID: "+external_id,
+                               user=self.user, passage=passage_out, manager_comment="External ID: " + external_id,
                                user_comment="", parent=None, is_demo=False, is_active=True)
                 tok_task_out = self.create_tokenization_task(**task_in)
                 tok_user_task_in = dict(tok_task_out)
 
-                passage = list(from_text(passage_text.split(),tokenized=True))[0]
+                passage = list(from_text(passage_text.split(), tokenized=True))[0]
                 tok_user_task_in.update(to_json(passage, return_dict=True, tok_task=True))
 
                 self.submit_tokenization_task(**tok_user_task_in)
-                print("Uploaded Passage "+filename+" successful.", file=sys.stderr)
-            
+                print("Uploaded Passage " + filename + " successful.", file=sys.stderr)
 
     @staticmethod
     def add_arguments(argparser):
@@ -69,4 +68,3 @@ if __name__ == "__main__":
     StreusselPassageUploader.add_arguments(argument_parser)
     main(**vars(argument_parser.parse_args()))
     sys.exit(0)
-
