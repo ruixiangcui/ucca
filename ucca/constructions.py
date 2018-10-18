@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from itertools import chain
 
 from ucca import textutil, layer0, layer1
 from ucca.layer1 import EdgeTags, NodeTags
@@ -44,7 +45,11 @@ class Categories(Construction):
             tag = candidate.edge.tag
         except AttributeError:
             tag = candidate
-        yield Construction(tag, CATEGORY_DESCRIPTIONS.get(tag, tag), criterion=None)
+        yield create_category_construction(tag)
+
+
+def create_category_construction(tag):
+    return Construction(tag, CATEGORY_DESCRIPTIONS.get(tag, tag), criterion=None)
 
 
 class Candidate:
@@ -218,7 +223,14 @@ def extract_candidates(passage, constructions=None, reference=None, reference_yi
     constructions = get_by_names(constructions)
     if reference is not None:
         verify_terminals_match(passage, reference)
-    extracted = OrderedDict((c, []) for c in constructions)
+    keys = []
+    for construction in constructions:
+        if construction.name == CATEGORIES_NAME:
+            if reference_yield_tags:
+                keys += list(map(create_category_construction, sorted(set(chain(*reference_yield_tags.values())))))
+        else:
+            keys.append(construction)
+    extracted = OrderedDict((c, []) for c in keys)
     for candidate in get_candidates(passage, reference, reference_yield_tags, verbose):
         for construction in candidate.constructions(constructions):
             extracted.setdefault(construction, []).append(candidate)
@@ -252,7 +264,8 @@ def create_passage_yields(p, *args, punct=False, **kwargs):
     """
     yield_tags = OrderedDict()
     for construction, candidates in extract_candidates(p, *args, **kwargs).items():
+        construction_yield_tags = yield_tags[construction] = {}
         for candidate in candidates:
             terminal_yield = candidate.terminal_yield if punct else candidate.terminal_yield_no_punct
-            yield_tags.setdefault(construction, {}).setdefault(terminal_yield, []).append(candidate.edge.tag)
+            construction_yield_tags.setdefault(terminal_yield, []).append(candidate.edge.tag)
     return yield_tags
