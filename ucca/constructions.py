@@ -190,9 +190,10 @@ def diff_terminals(*passages):
 
 def verify_terminals_match(passage, reference):
     ids1, ids2 = terminal_ids(passage), terminal_ids(reference)
-    assert ids1 == ids2, "Reference passage terminals do not match: %s (%d != %d)\nDifference:\n%s" % (
-        reference.ID, len(terminal_ids(passage)), len(terminal_ids(reference)),
-        "\n".join(map(str, diff_terminals(passage, reference))))
+    assert ids1 == ids2, "Reference passage terminals do not match (%d != %d)\n" \
+                         "Passage ID: %s\nReference ID: %s\nDifference:\n%s" % \
+                         (len(terminal_ids(passage)), len(terminal_ids(reference)), passage.ID, reference.ID,
+                          "\n".join(map(str, diff_terminals(passage, reference))))
 
 
 def get_candidates(passage, reference=None, reference_yield_tags=None, verbose=False):
