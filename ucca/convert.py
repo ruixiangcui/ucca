@@ -834,8 +834,8 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
     for unit in d["annotation_units"]:  # Assuming topological sort: parents always appear before children
         tree_id = unit["tree_id"]
         remote = unit["is_remote_copy"]
-        if not remote and tree_id in tree_id_to_node:  # Skip repeated units
-            continue
+        if not remote and tree_id in tree_id_to_node:
+            raise ValueError("Unit %s is repeated" % tree_id)
         parent_tree_id = unit["parent_tree_id"]
         if parent_tree_id is None:  # No need to create root node
             tree_id_to_node[tree_id] = None
