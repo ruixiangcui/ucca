@@ -165,6 +165,7 @@ def write_passage(passage, output_format=None, binary=False, outdir=".", prefix=
     :param basename: use this instead of `passage.ID' for the output filename
     :return: path of created output file
     """
+    os.makedirs(outdir, exist_ok=True)
     suffix = output_format if output_format and output_format != "ucca" else ("pickle" if binary else "xml")
     outfile = os.path.join(outdir, prefix + (basename or passage.ID) + "." + suffix)
     if verbose:
