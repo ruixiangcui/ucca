@@ -825,7 +825,7 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
     l0 = layer0.Layer0(passage)
     token_id_to_terminal = {token["id"]: l0.add_terminal(
         text=token["text"], punct=not token["require_annotation"], paragraph=1)
-        for token in sorted(d["tokens"], key=itemgetter("start_index"))}
+        for token in sorted(d["tokens"], key=itemgetter("index_in_task"))}
     # Create non-terminals
     l1 = layer1.Layer1(passage)
     tree_id_to_node = {}
@@ -904,6 +904,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
         for terminal in terminals:
             end_index = start_index + len(terminal.text)
             token = dict(text=terminal.text, start_index=start_index, end_index=end_index,
+                         index_in_task=terminal.position - 1,
                          require_annotation=not layer0.is_punct(terminal))
             if tok_task is None:  # When doing tokenization as a task, no need to fill the IDs (done by the server)
                 token["id"] = terminal_id_to_token_id[terminal.ID] = terminal.position
