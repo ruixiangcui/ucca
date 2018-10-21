@@ -12,8 +12,8 @@ from ucca.evaluation import evaluate
 
 def main(args):
     keys = [args.guessed, args.ref]
-    xmls = ucca_db.get_by_xids(args.db_filename, args.host, keys) if args.from_xids else \
-        ucca_db.get_xml_trees(args.db_filename, args.host, args.pid, keys)
+    xmls = ucca_db.get_by_xids(db_name=args.db_filename, host_name=args.host, xids=keys) if args.from_xids else \
+        ucca_db.get_xml_trees(db_name=args.db_filename, host_name=args.host, pid=args.pid, usernames=keys)
     guessed, ref = [convert.from_site(x) for x in xmls]
     if args.units or args.fscore or args.errors:
         evaluate(guessed, ref, units=args.units, fscore=args.fscore, errors=args.errors,

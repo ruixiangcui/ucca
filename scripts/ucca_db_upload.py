@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 from xml.etree.ElementTree import tostring
 
-from scripts.ucca_db2 import CONNECTION, write_to_db
+from scripts.ucca_db import CONNECTION, write_to_db
 from ucca import convert
 from ucca.ioutil import get_passages_with_progress_bar
 
