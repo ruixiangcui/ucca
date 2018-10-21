@@ -831,19 +831,25 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
     tree_id_to_node = {}
     token_id_to_preterminal = {}
     category_id_to_name = {c["id"]: c["name"] for c in all_categories} if all_categories else None
-    for unit in d["annotation_units"]:  # Assuming topological sort: parents always appear before children
+    # Assuming topological sort: parents always appear before children
+    for unit in sorted(d["annotation_units"], key=itemgetter("is_remote_copy")):  # Get non-remotes first
         tree_id = unit["tree_id"]
         remote = unit["is_remote_copy"]
-        if not remote and tree_id in tree_id_to_node:
+        cloned_from_tree_id = None
+        if remote:
+            cloned_from_tree_id = unit.get("cloned_from_tree_id")
+            if cloned_from_tree_id is None:
+                raise ValueError("Remote unit %s without cloned_from_tree_id" % tree_id)
+        elif tree_id in tree_id_to_node:
             raise ValueError("Unit %s is repeated" % tree_id)
         parent_tree_id = unit["parent_tree_id"]
-        if parent_tree_id is None:  # No need to create root node
+        if parent_tree_id is None:  # Root node: no need to create
             tree_id_to_node[tree_id] = None
             continue
         try:
             parent_node = tree_id_to_node[parent_tree_id]
         except KeyError:
-            raise ValueError("Unit %s appears before its parent" % tree_id)
+            raise ValueError("Unit %s appears before its parent, %s" % (tree_id, parent_tree_id))
         category_name_to_edge_tag = {} if skip_category_mapping else EdgeTags.__dict__
         for category in unit["categories"]:
             try:
@@ -862,9 +868,9 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
                 terminal = None
             if remote:
                 try:
-                    node = tree_id_to_node[tree_id]
+                    node = tree_id_to_node[cloned_from_tree_id]
                 except KeyError:
-                    raise ValueError("Remote copy of unit %s appears before its first non-remote copy" % tree_id)
+                    raise ValueError("Remote copy %s refers to nonexistent unit: %s" % (tree_id, cloned_from_tree_id))
                 l1.add_remote(parent_node, tag, node)
             elif not skip_category_mapping and terminal and layer0.is_punct(terminal):
                 tree_id_to_node[tree_id] = l1.add_punct(None, terminal)
@@ -872,7 +878,6 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
                 node = tree_id_to_node[tree_id] = l1.add_fnode(parent_node, tag, implicit=(unit["type"] == "IMPLICIT"))
                 for token in children_tokens:
                     token_id_to_preterminal[token["id"]] = node
-                remote = True  # Any further categories between the same pair of units will result in remote edges
     # Attach terminals to non-terminals
     for token_id, node in token_id_to_preterminal.items():
         terminal = token_id_to_terminal[token_id]
@@ -963,7 +968,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
         # Modify tree id of remote copies to be the same as their non-remote units, and not as originally constructed
         for node_id, remote_annotation_units in node_id_to_remote_annotation_units.items():
             for unit in remote_annotation_units:
-                unit["tree_id"] = node_id_to_primary_annotation_unit[node_id]["tree_id"]
+                unit["cloned_from_tree_id"] = node_id_to_primary_annotation_unit[node_id]["tree_id"]
     d = dict(tokens=tokens, annotation_units=annotation_units, manager_comment=passage.ID)
     return d if return_dict else json.dumps(d).splitlines()
 
