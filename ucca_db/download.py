@@ -3,9 +3,9 @@ from argparse import ArgumentParser
 from tqdm import tqdm
 from xml.etree.ElementTree import tostring
 
-from scripts.ucca_db import get_by_xids, get_most_recent_passage_by_uid
 from ucca import convert
 from ucca.ioutil import write_passage, external_write_mode
+from ucca_db.api import get_by_xids, get_most_recent_passage_by_uid
 
 desc = "Download passages from old UCCA annotation app"
 

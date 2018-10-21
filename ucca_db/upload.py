@@ -1,9 +1,9 @@
 from argparse import ArgumentParser
 from xml.etree.ElementTree import tostring
 
-from scripts.ucca_db import CONNECTION, write_to_db
 from ucca import convert
 from ucca.ioutil import get_passages_with_progress_bar
+from ucca_db.api import CONNECTION, write_to_db
 
 desc = "Upload passages to old UCCA annotation app"
 

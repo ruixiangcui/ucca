@@ -5,15 +5,15 @@ The evaluation software for UCCA layer 1.
 
 from argparse import ArgumentParser
 
-from scripts import ucca_db
 from ucca import convert, constructions
 from ucca.evaluation import evaluate
+from ucca_db import api
 
 
 def main(args):
     keys = [args.guessed, args.ref]
-    xmls = ucca_db.get_by_xids(db_name=args.db_filename, host_name=args.host, xids=keys) if args.from_xids else \
-        ucca_db.get_xml_trees(db_name=args.db_filename, host_name=args.host, pid=args.pid, usernames=keys)
+    xmls = api.get_by_xids(db_name=args.db_filename, host_name=args.host, xids=keys) if args.from_xids else \
+        api.get_xml_trees(db_name=args.db_filename, host_name=args.host, pid=args.pid, usernames=keys)
     guessed, ref = [convert.from_site(x) for x in xmls]
     if args.units or args.fscore or args.errors:
         evaluate(guessed, ref, units=args.units, fscore=args.fscore, errors=args.errors,
