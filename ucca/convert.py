@@ -936,7 +936,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
             node = edge.child
             remote = edge.attrib.get("remote", False)
             parent_annotation_unit = node_id_to_primary_annotation_unit[edge.parent.ID]
-            categories = [dict(name=edge_tag_to_category_name.get(edge.tag, edge.tag))]
+            categories = [dict(name=edge_tag_to_category_name.get(edge.tag, edge.tag), slot=1)]
             terminals = node.get_terminals()
             outgoing = [e for e in node if e.tag not in IGNORED_EDGE_TAGS]
             if not outgoing and len(terminals) > 1:
