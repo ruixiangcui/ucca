@@ -13,7 +13,7 @@ The possible other formats are:
 
 import sys
 from collections import defaultdict
-from itertools import repeat
+from itertools import repeat, groupby
 
 import json
 import os
@@ -927,23 +927,31 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
     annotation_units = []
     if tok_task is not True:  # Annotation required, not just tokenization; tok_task might be None or a full task dict
         root_node = passage.layer(layer1.LAYER_ID).heads[0]  # Ignoring Linkage: taking only the first head
-        root_unit = dict(tree_id="0", type="REGULAR", is_remote_copy=False, categories=[], comment="",
-                         parent_tree_id=None, gui_status="OPEN", children_tokens=[], cluster="")
+        root_unit = dict(tree_id="0", type="REGULAR", is_remote_copy=False, categories=[], comment="", cluster="",
+                         parent_tree_id=None, gui_status="OPEN",
+                         children_tokens=[dict(id=terminal_id_to_token_id[t.ID]) for t in terminals])
         annotation_units.append(root_unit)
         node_id_to_primary_annotation_unit = {root_node.ID: root_unit}
         node_id_to_remote_annotation_units = defaultdict(list)
         edge_tag_to_category_name = {} if skip_category_mapping else \
             {v: re.sub(r"(?<=[a-z])(?=[A-Z])", " ", k) for k, v in EdgeTags.__dict__.items()}
-        root_outgoing = [e for e in root_node if e.tag not in IGNORED_EDGE_TAGS]
-        queue = [([i + 1], e) for i, e in enumerate(root_outgoing)]  # (tree id elements, edge) for each edge
+
+        def _outgoing(n):
+            return [([i + 1], list(es)) for i, (_, es) in enumerate(
+                groupby(sorted([e for e in n if e.tag not in IGNORED_EDGE_TAGS],
+                               key=attrgetter("child.start_position")),
+                        key=lambda e: (e.child.ID, e.attrib.get("remote"))))]
+        # (tree id elements, edges per child) for each edge
+        queue = _outgoing(root_node)
         while queue:  # breadth-first search
-            tree_id_elements, edge = queue.pop(0)
+            tree_id_elements, edges = queue.pop(0)  # edges all have the same child but may differ by category
+            edge = edges[0]
             node = edge.child
             remote = edge.attrib.get("remote", False)
             parent_annotation_unit = node_id_to_primary_annotation_unit[edge.parent.ID]
-            categories = [dict(name=edge_tag_to_category_name.get(edge.tag, edge.tag), slot=1)]
+            categories = [dict(name=edge_tag_to_category_name.get(e.tag, e.tag), slot=1) for e in edges]
             terminals = node.get_terminals()
-            outgoing = [e for e in node if e.tag not in IGNORED_EDGE_TAGS]
+            outgoing = _outgoing(node)
             if not outgoing and len(terminals) > 1:
                 categories.insert(0, dict(name=UNANALYZABLE))
             if all_categories:
@@ -961,11 +969,11 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
             if remote:
                 node_id_to_remote_annotation_units[node.ID].append(unit)
             else:
-                for i, edge in enumerate(outgoing):
-                    queue.append((tree_id_elements + [i + 1], edge))
+                for element, edges in outgoing:
+                    queue.append((tree_id_elements + element, edges))
                 node_id_to_primary_annotation_unit[node.ID] = unit
             annotation_units.append(unit)
-        # Modify tree id of remote copies to be the same as their non-remote units, and not as originally constructed
+        # Update cloned_from_tree_id of remote copies to be the tree_id as their non-remote units
         for node_id, remote_annotation_units in node_id_to_remote_annotation_units.items():
             for unit in remote_annotation_units:
                 unit["cloned_from_tree_id"] = node_id_to_primary_annotation_unit[node_id]["tree_id"]
