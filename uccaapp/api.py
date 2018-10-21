@@ -29,20 +29,34 @@ class ServerAccessor:
         server_address = server_address or os.environ.get(SERVER_ADDRESS_ENV_VAR, DEFAULT_SERVER)
         self.prefix = server_address + API_PREFIX
         self.headers = {}  # Needed for self.request (login)
-        token = auth_token or os.environ.get(AUTH_TOKEN_ENV_VAR) or self.login(
-            email or os.environ[EMAIL_ENV_VAR], password or os.environ[PASSWORD_ENV_VAR])["token"]
+        try:
+            token = auth_token or os.environ.get(AUTH_TOKEN_ENV_VAR) or self.login(
+                email or os.environ[EMAIL_ENV_VAR], password or os.environ[PASSWORD_ENV_VAR])["token"]
+        except KeyError as e:
+            raise ValueError("Must set either --auth-token, or --email and --password."
+                             "Alternatively, set the %s environment variable, or %s and %s" %
+                             (AUTH_TOKEN_ENV_VAR, EMAIL_ENV_VAR, PASSWORD_ENV_VAR)) from e
         self.headers["Authorization"] = "Token " + token
         self.source = self.project = self.layer = self.user = None
 
     def set_source(self, source_id=None):
-        self.source = self.get_source(source_id or int(os.environ[SOURCE_ID_ENV_VAR]))
+        try:
+            self.source = self.get_source(int(os.environ[SOURCE_ID_ENV_VAR]) if source_id is None else source_id)
+        except KeyError as e:
+            raise ValueError("Must set --source-id or the %s environment variable" % SOURCE_ID_ENV_VAR) from e
 
     def set_project(self, project_id=None):
-        self.project = self.get_project(project_id or int(os.environ[PROJECT_ID_ENV_VAR]))
+        try:
+            self.project = self.get_project(int(os.environ[PROJECT_ID_ENV_VAR]) if project_id is None else project_id)
+        except KeyError as e:
+            raise ValueError("Must set --project-id or the %s environment variable" % PROJECT_ID_ENV_VAR) from e
         self.layer = self.get_layer(self.project["layer"]["id"])
 
     def set_user(self, user_id=None):
-        self.user = dict(id=user_id or int(os.environ[USER_ID_ENV_VAR]))
+        try:
+            self.user = dict(id=int(os.environ[USER_ID_ENV_VAR]) if user_id is None else user_id)
+        except KeyError as e:
+            raise ValueError("Must set --user-id or the %s environment variable" % USER_ID_ENV_VAR) from e
 
     @staticmethod
     def add_arguments(argparser):
