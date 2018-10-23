@@ -936,11 +936,20 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
         edge_tag_to_category_name = {} if skip_category_mapping else \
             {v: re.sub(r"(?<=[a-z])(?=[A-Z])", " ", k) for k, v in EdgeTags.__dict__.items()}
 
-        def _outgoing(n):
+        def _outgoing(n):  # (tree ID element, outgoing edges sharing parent and child) for all children of node n
             return [([i + 1], list(es)) for i, (_, es) in enumerate(
                 groupby(sorted([e for e in n if e.tag not in IGNORED_EDGE_TAGS],
                                key=attrgetter("child.start_position")),
                         key=lambda e: (e.child.ID, e.attrib.get("remote"))))]
+
+        def _extra_tag(e):  # categories mentioned in the "remarks" attribute of the "extra" element in the node
+            tag = e.child.extra.get("remarks")
+            if tag:
+                tag = tag.upper().replace("ALSO ", "")
+                if len(tag) != 1:
+                    tag = None
+            return tag
+
         # (tree id elements, edges per child) for each edge
         queue = _outgoing(root_node)
         while queue:  # breadth-first search
@@ -949,7 +958,9 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
             node = edge.child
             remote = edge.attrib.get("remote", False)
             parent_annotation_unit = node_id_to_primary_annotation_unit[edge.parent.ID]
-            categories = [dict(name=edge_tag_to_category_name.get(e.tag, e.tag), slot=1) for e in edges]
+            tags = [e.tag for e in edges] + \
+                list(filter(None, (_extra_tag(e) for e in edges if not e.attrib.get("remote"))))
+            categories = [dict(name=edge_tag_to_category_name.get(t, t), slot=1) for t in tags]
             terminals = node.get_terminals()
             outgoing = _outgoing(node)
             if not outgoing and len(terminals) > 1:
