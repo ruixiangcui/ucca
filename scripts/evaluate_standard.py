@@ -75,11 +75,12 @@ def summarize(args, results):
             for result in results:
                 print(",".join(result.fields()), file=f)
         print("Wrote '%s'" % args.out_file)
-    if args.summary_file:
-        with open(args.summary_file, "w", encoding="utf-8") as f:
-            print(",".join(summary.titles()), file=f)
-            print(",".join(summary.fields()), file=f)
-        print("Wrote '%s'" % args.summary_file)
+    for filename, counts in ((args.summary_file, False), (args.counts_file, True)):
+        if filename:
+            with open(filename, "w", encoding="utf-8") as f:
+                print(",".join(summary.titles(counts=counts)), file=f)
+                print(",".join(summary.fields(counts=counts)), file=f)
+            print("Wrote '%s'" % filename)
     if args.errors_file:
         with open(args.errors_file, "w", encoding="utf-8") as f:
             summary.print_confusion_matrix(sep=",", file=f)
@@ -115,7 +116,8 @@ if __name__ == "__main__":
                            help="do not match passages by ID, instead matching by order")
     argparser.add_argument("--unlabeled", action="store_true", help="only unlabeled evaluation")
     argparser.add_argument("--out-file", help="file to write results for each evaluated passage to, in CSV format")
-    argparser.add_argument("--summary-file", help="file to write aggregated results to, in CSV format")
+    argparser.add_argument("--summary-file", help="file to write aggregated scores to, in CSV format")
+    argparser.add_argument("--counts-file", help="file to write aggregated counts to, in CSV format")
     argparser.add_argument("--errors-file", help="file to write aggregated confusion matrix to, in CSV format")
     group = argparser.add_mutually_exclusive_group()
     group.add_argument("-v", "--verbose", action="store_true",

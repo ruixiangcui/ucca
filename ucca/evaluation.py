@@ -207,17 +207,19 @@ class Scores:
             if evaluator:
                 evaluator.print_confusion_matrix("Evaluation type: (" + eval_type + ")", *args, **kwargs)
 
-    def fields(self, eval_type=LABELED):
+    def fields(self, eval_type=LABELED, counts=False):
         e = self[eval_type]
-        return ["%.3f" % float(getattr(x, y)) for x in e.results.values() for y in ("p", "r", "f1")]
+        attrs = ("num_guessed", "num_ref") if counts else ("p", "r", "f1")
+        return ["%.3f" % float(getattr(x, y)) for x in e.results.values() for y in attrs]
 
-    def titles(self, eval_type=LABELED):
-        return self.field_titles(self[eval_type].results.keys(), eval_type=eval_type)
+    def titles(self, eval_type=LABELED, counts=False):
+        return self.field_titles(self[eval_type].results.keys(), eval_type=eval_type, counts=counts)
 
     @staticmethod
-    def field_titles(constructions=DEFAULT, eval_type=LABELED):
+    def field_titles(constructions=DEFAULT, eval_type=LABELED, counts=False):
+        titles = ("guessed", "ref") if counts else ("precision", "recall", "f1")
         return ["_".join(((str(x),) if len(constructions) > 1 else ()) + (eval_type, y))
-                for x in constructions for y in ("precision", "recall", "f1")]
+                for x in constructions for y in titles]
 
     def __getitem__(self, eval_type):
         return self.evaluators[eval_type]
