@@ -194,15 +194,15 @@ class Scores:
                       name=names[0] if len(names) == 1 else None,
                       evaluation_format=formats[0] if len(formats) == 1 else None)
 
-    def print(self, **kwargs):
-        for eval_type in EVAL_TYPES:
+    def print(self, eval_type=None, **kwargs):
+        for eval_type in EVAL_TYPES if eval_type is None else [eval_type]:
             evaluator = self.evaluators.get(eval_type)
             if evaluator:
                 print("Evaluation type: (" + eval_type + ")", **kwargs)
                 evaluator.print(**kwargs)
 
-    def print_confusion_matrix(self, *args, **kwargs):
-        for eval_type in EVAL_TYPES:
+    def print_confusion_matrix(self, *args, eval_type=None, **kwargs):
+        for eval_type in EVAL_TYPES if eval_type is None else [eval_type]:
             evaluator = self.evaluators.get(eval_type)
             if evaluator:
                 evaluator.print_confusion_matrix("Evaluation type: (" + eval_type + ")", *args, **kwargs)

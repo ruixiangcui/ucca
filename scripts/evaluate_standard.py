@@ -15,6 +15,7 @@ def main(args):
         guessed = match_by_id(guessed, ref)
         ref_yield_tags = match_by_id(ref_yield_tags, ref)
     results = []
+    eval_type = evaluation.UNLABELED if args.unlabeled else evaluation.LABELED
     for g, r, ryt in zip(guessed, ref, ref_yield_tags or repeat(None)):
         if len(guessed) > 1:
             sys.stdout.write("\rEvaluating %s%s" % (g.ID, ":" if args.verbose else "..."))
@@ -26,9 +27,9 @@ def main(args):
                                      normalize=args.normalize, ref_yield_tags=ryt,
                                      eval_type=evaluation.UNLABELED if args.unlabeled else None)
         if args.verbose:
-            print_f1(result, args.unlabeled)
+            print_f1(result, eval_type)
         results.append(result)
-    summarize(args, results)
+    summarize(args, results, eval_type=eval_type)
 
 
 def match_by_id(guessed, ref):
@@ -50,12 +51,11 @@ def match_by_id(guessed, ref):
     return guessed
 
 
-def print_f1(result, unlabeled=False):
-    print("Average %slabeled F1 score: %.3f" % ("un" if unlabeled else "", result.average_f1(
-        evaluation.UNLABELED if unlabeled else evaluation.LABELED)))
+def print_f1(result, eval_type):
+    print("Average %s F1 score: %.3f" % (eval_type, result.average_f1(eval_type)))
 
 
-def summarize(args, results):
+def summarize(args, results, eval_type):
     summary = evaluation.Scores.aggregate(results)
     if len(results) > 1:
         if args.verbose:
@@ -68,18 +68,18 @@ def summarize(args, results):
                 elif args.errors:
                     summary.print_confusion_matrix()
         if not args.quiet:
-            print_f1(summary, args.unlabeled)
+            print_f1(summary, eval_type=eval_type)
     if args.out_file:
         with open(args.out_file, "w", encoding="utf-8") as f:
-            print(",".join(summary.titles()), file=f)
+            print(",".join(summary.titles(eval_type=eval_type)), file=f)
             for result in results:
-                print(",".join(result.fields()), file=f)
+                print(",".join(result.fields(eval_type=eval_type)), file=f)
         print("Wrote '%s'" % args.out_file)
     for filename, counts in ((args.summary_file, False), (args.counts_file, True)):
         if filename:
             with open(filename, "w", encoding="utf-8") as f:
-                print(",".join(summary.titles(counts=counts)), file=f)
-                print(",".join(summary.fields(counts=counts)), file=f)
+                print(",".join(summary.titles(eval_type=eval_type, counts=counts)), file=f)
+                print(",".join(summary.fields(eval_type=eval_type, counts=counts)), file=f)
             print("Wrote '%s'" % filename)
     if args.errors_file:
         with open(args.errors_file, "w", encoding="utf-8") as f:
