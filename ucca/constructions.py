@@ -258,7 +258,7 @@ def create_passage_yields(p, *args, punct=False, **kwargs):
     """
     :param p: passage to find terminal yields of
     :param punct: whether to include punctuation in terminal yield
-    :returns dict: Construction ->
+    :returns: dict: Construction ->
                    dict: set of terminal indices (excluding punctuation) ->
                          list of edges of the Construction whose yield (excluding remotes and punctuation) is that set
     """

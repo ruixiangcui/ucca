@@ -114,7 +114,7 @@ class Evaluator:
         3. WEAK_LABELED: also requires weak tag match (if there are multiple units with the same yield,
                          requires one match)
         :param r: reference passage for fine-grained evaluation
-        :returns EvaluatorResults object if self.fscore is True, otherwise None
+        :returns: EvaluatorResults object if self.fscore is True, otherwise None
         """
         self.mutual.clear()
         self.error_counters.clear()

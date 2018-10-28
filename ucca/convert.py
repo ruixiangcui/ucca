@@ -1,7 +1,7 @@
 """Converter module between different UCCA annotation formats.
 
 This module contains utilities to convert between UCCA annotation in different
-forms, to/from the :class:core.Passage form, acts as a pivot for all
+forms, to/from the :class:`core`.Passage form, acts as a pivot for all
 conversions.
 
 The possible other formats are:
@@ -175,7 +175,7 @@ def _from_site_terminals(elem, passage, elem2node):
 
     Some of the terminals metadata (remarks, type) is saved in a wrapper unit
     which encapsulates each terminal, so we use both for creating our
-    :class:layer0.Terminal objects.
+    :class:`layer0`.Terminal objects.
 
     :param elem: root element of the XML hierarchy
     :param passage: passage to add the Terminals to, already with Layer0 object
@@ -216,7 +216,7 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
     :param groups: the main XML element of the discontiguous units (unitGroups)
     :param elem2node: mapping between site IDs and Nodes, updated here
 
-    :return a list of (parent, elem) pairs which weren't process, as they should
+    :return: a list of (parent, elem) pairs which weren't process, as they should
         be process last (usually because they contain references to not-yet
         created Nodes).
     """
@@ -350,11 +350,11 @@ def _from_site_annotation(elem, passage, elem2node):
 
 
 def from_site(elem):
-    """Converts site XML structure to :class:core.Passage object.
+    """Converts site XML structure to :class:`core`.Passage object.
 
     :param elem: root element of the XML structure
 
-    :return The converted core.Passage object
+    :return: The converted core.Passage object
     """
     pid = elem.find(SiteCfg.Paths.Main).get(SiteCfg.Attr.PassageID)
     passage = core.Passage(pid)
@@ -369,7 +369,7 @@ def to_site(passage):
 
     :param passage: the passage to convert
 
-    :return the root element of the standard XML structure
+    :return: the root element of the standard XML structure
     """
 
     class _State:
@@ -580,7 +580,7 @@ def to_standard(passage):
 
     :param passage: the passage to convert
 
-    :return the root element of the standard XML structure
+    :return: the root element of the standard XML structure
     """
 
     # This utility stringifies the Unit's attributes for proper XML
@@ -703,7 +703,7 @@ def from_text(text, passage_id="1", tokenized=False, one_per_line=False, extra_f
     :param extra_format: value to set in passage.extra["format"]
     :param lang: language to use for tokenization model
 
-    :return generator of Passage object with only Terminal units
+    :return: generator of Passage object with only Terminal units
     """
     del args, kwargs
     if isinstance(text, str):
@@ -742,7 +742,7 @@ def to_text(passage, sentences=True, lang="en", *args, **kwargs):
                       or leave as one string. Defaults to True
     :param lang: language to use for sentence splitting model
 
-    :return a list of strings - 1 if sentences=False, # of sentences otherwise
+    :return: a list of strings - 1 if sentences=False, # of sentences otherwise
     """
     del args, kwargs
     tokens = [x.text for x in sorted(passage.layer(layer0.LAYER_ID).all,
@@ -764,7 +764,7 @@ def to_sequence(passage):
 
     :param passage: the Passage object to convert
 
-    :return a list of strings - 1 if sentences=False, # of sentences otherwise
+    :return: a list of strings - 1 if sentences=False, # of sentences otherwise
     """
     def _position(edge):
         while edge.child.layer.ID != layer0.LAYER_ID:
@@ -816,7 +816,7 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
     :param lines: iterable of lines in JSON format, describing a single passage.
     :param all_categories: list of category dicts so that IDs can be resolved to names, if available
     :param skip_category_mapping: if False, translate category names to edge tag abbreviations; if True, don't
-    :return generator of Passage objects
+    :return: generator of Passage objects
     """
     del args, kwargs
     d = lines if isinstance(lines, dict) else json.loads("".join(lines))
@@ -897,7 +897,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
     :param tok_task: completed tokenization task with token IDs, or if True, return tokenization instead of annotation
     :param all_categories: list of category dicts so that IDs can be added, if available
     :param skip_category_mapping: if False, translate edge tag abbreviations to category names; if True, don't
-    :return list of lines in JSON format (or dict)
+    :return: list of lines in JSON format (or dict)
     """
     del args, kwargs
     # Create tokens
