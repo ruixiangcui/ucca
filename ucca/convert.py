@@ -928,7 +928,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
     if tok_task is not True:  # Annotation required, not just tokenization; tok_task might be None or a full task dict
         root_node = passage.layer(layer1.LAYER_ID).heads[0]  # Ignoring Linkage: taking only the first head
         root_unit = dict(tree_id="0", type="REGULAR", is_remote_copy=False, categories=[], comment="", cluster="",
-                         parent_tree_id=None, gui_status="OPEN",
+                         parent_tree_id=None, gui_status="OPEN", cloned_from_tree_id=None,
                          children_tokens=[dict(id=terminal_id_to_token_id[t.ID]) for t in terminals])
         annotation_units.append(root_unit)
         node_id_to_primary_annotation_unit = {root_node.ID: root_unit}
@@ -974,7 +974,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
                         raise ValueError("Category missing from layer: " + category["name"])
             unit = dict(tree_id="-".join(map(str, tree_id_elements)),
                         type="IMPLICIT" if node.attrib.get("implicit") else "REGULAR", is_remote_copy=remote,
-                        categories=categories, comment=node.ID, cluster="",
+                        categories=categories, comment=node.ID, cluster="", cloned_from_tree_id=None,
                         parent_tree_id=parent_annotation_unit["tree_id"], gui_status="OPEN",
                         children_tokens=[dict(id=terminal_id_to_token_id[t.ID]) for t in terminals])
             if remote:
