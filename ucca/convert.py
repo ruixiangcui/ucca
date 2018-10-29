@@ -1003,7 +1003,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
             units = list(units)
             start_indices = [min([t["start_index"] for t in tokens
                                   if any(s["id"] == t["id"] for s in u["children_tokens"])] or [-1]) for u in units]
-            assert all(i < j for i, j in zip(start_indices[:-1], start_indices[1:])), \
+            assert all(i == -1 or i < j for i, j in zip(start_indices[:-1], start_indices[1:])), \
                 "Siblings are not correctly ordered by their minimal start_index: " +\
                 ", ".join(u["comment"] for u in units)
 
