@@ -1,7 +1,7 @@
-import argparse
 import sys
-from glob import glob
 
+import argparse
+from glob import glob
 from requests.exceptions import HTTPError
 
 from ucca.evaluation import evaluate, Scores
@@ -25,7 +25,7 @@ def main(filenames, write, **kwargs):
     scores = []
     try:
         for pattern in filenames:
-            filenames = glob(pattern)
+            filenames = sorted(glob(pattern))
             if not filenames:
                 raise IOError("Not found: " + pattern)
             for ref in read_files_and_dirs(filenames):

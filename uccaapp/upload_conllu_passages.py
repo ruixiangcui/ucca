@@ -27,7 +27,7 @@ class ConlluPassageUploader(ServerAccessor):
     def upload_passages(self, filenames, **kwargs):
         del kwargs
         for pattern in filenames:
-            filenames = glob(pattern)
+            filenames = sorted(glob(pattern))
             if not filenames:
                 raise IOError("Not found: " + pattern)
             for filename in sorted(filenames):
