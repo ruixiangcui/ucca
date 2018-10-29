@@ -272,10 +272,10 @@ class FoundationalNode(core.Node):
         :return: a list of :class:`layer0`.Terminal objects
         """
         if visited is None:
-            visited = set()
-        return sorted([t for e in set(self) - visited if remotes or not e.attrib.get("remote")
-                       for t in e.child.get_terminals(punct, remotes, visited | set(self))],
-                      key=operator.attrgetter("position"))
+            return sorted(self.get_terminals(punct=punct, remotes=remotes, visited=set()),
+                          key=operator.attrgetter("position"))
+        return [t for e in set(self) - visited if remotes or not e.attrib.get("remote")
+                for t in e.child.get_terminals(punct, remotes, visited | set(self))]
 
     @property
     def start_position(self):
