@@ -928,8 +928,10 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
     if tok_task is not True:  # Annotation required, not just tokenization; tok_task might be None or a full task dict
 
         def _create_unit(elements, n, ts, cs, is_remote_copy=False, parent_tree_id=None):
+            implicit = n.attrib.get("implicit")
+            assert implicit or ts, "Only implicit units may not have a children_tokens field: " + n.ID
             return dict(tree_id="-".join(map(str, elements)),
-                        type="IMPLICIT" if n.attrib.get("implicit") else "REGULAR", is_remote_copy=is_remote_copy,
+                        type="IMPLICIT" if implicit else "REGULAR", is_remote_copy=is_remote_copy,
                         categories=cs, comment=n.ID, cluster="", cloned_from_tree_id=None,
                         parent_tree_id=parent_tree_id, gui_status="OPEN",
                         children_tokens=[dict(id=terminal_id_to_token_id[t.ID]) for t in ts])
