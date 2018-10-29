@@ -949,7 +949,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
             return [(elements + [i], list(es)) for i, (_, es) in enumerate(
                 groupby(sorted([e for e in n if e.tag not in IGNORED_EDGE_TAGS],
                                key=attrgetter("child.start_position")),
-                        key=lambda e: (e.child.ID, e.attrib.get("remote"))), start=1)]
+                        key=lambda e: e.child.ID), start=1)]
 
         def _extra_tag(e):  # categories mentioned in the "remarks" attribute of the "extra" element in the node
             tag = e.child.extra.get("remarks")
