@@ -274,8 +274,9 @@ class FoundationalNode(core.Node):
         if visited is None:
             return sorted(self.get_terminals(punct=punct, remotes=remotes, visited=set()),
                           key=operator.attrgetter("position"))
-        return [t for e in set(self) - visited if remotes or not e.attrib.get("remote")
-                for t in e.child.get_terminals(punct, remotes, visited | set(self))]
+        outgoing = {e for e in set(self) - visited if remotes or not e.attrib.get("remote")}
+        return [t for e in outgoing for t in e.child.get_terminals(
+            punct=punct, remotes=remotes, visited=visited | outgoing)]
 
     @property
     def start_position(self):
