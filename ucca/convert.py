@@ -894,10 +894,11 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
     """Convert a Passage object to text (or dict) in UCCA-App JSON
     :param passage: the Passage object to convert
     :param return_dict: whether to return dict rather than list of lines
-    :param tok_task: completed tokenization task with token IDs, or if True, return tokenization instead of annotation
-    :param all_categories: list of category dicts so that IDs can be added, if available
+    :param tok_task: either None (to do tokenization too), or a completed tokenization task dict with token IDs,
+                     or True, to indicate that the function should do only tokenization and not annotation
+    :param all_categories: list of category dicts so that IDs can be added, if available - otherwise names are used
     :param skip_category_mapping: if False, translate edge tag abbreviations to category names; if True, don't
-    :return: list of lines in JSON format (or dict)
+    :return: list of lines in JSON format if return_dict=False, or task dict if True
     """
     del args, kwargs
     # Create tokens
@@ -988,7 +989,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
                 queue += outgoing
                 node_id_to_primary_annotation_unit[node.ID] = unit
             annotation_units.append(unit)
-        # Update cloned_from_tree_id of remote copies to be the tree_id as their non-remote units
+        # Update cloned_from_tree_id of remote copies to be the tree_id of their non-remote units
         for node_id, remote_annotation_units in node_id_to_remote_annotation_units.items():
             for unit in remote_annotation_units:
                 unit["cloned_from_tree_id"] = node_id_to_primary_annotation_unit[node_id]["tree_id"]
