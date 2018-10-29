@@ -24,8 +24,7 @@ RETRY_WAIT_DURATION = 60
 
 class ServerAccessor:
     def __init__(self, server_address, email, password, auth_token=None, verbose=False, **kwargs):
-        if verbose:
-            logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
         server_address = server_address or os.environ.get(SERVER_ADDRESS_ENV_VAR, DEFAULT_SERVER)
         self.prefix = server_address + API_PREFIX
         self.headers = {}  # Needed for self.request (login)
