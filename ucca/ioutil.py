@@ -128,7 +128,8 @@ def gen_files(files_and_dirs):
     """
     for file_or_dir in [files_and_dirs] if isinstance(files_and_dirs, str) else files_and_dirs:
         if os.path.isdir(file_or_dir):
-            yield from filterfalse(os.path.isdir, (os.path.join(file_or_dir, f) for f in os.listdir(file_or_dir)))
+            yield from filterfalse(os.path.isdir, (os.path.join(file_or_dir, f)
+                                                   for f in sorted(os.listdir(file_or_dir))))
         else:
             yield file_or_dir
 
