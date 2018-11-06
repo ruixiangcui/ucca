@@ -151,11 +151,12 @@ class ServerAccessor:
         logging.debug("Created passage: " + json.dumps(passage_out))
         return passage_out
 
-    def create_tokenization_task(self, **kwargs):
-        logging.debug("Creating tokenization task: " + json.dumps(kwargs))
-        tok_task_out = self.request("post", "tasks/", json=kwargs).json()
-        logging.debug("Created tokenization task: " + json.dumps(tok_task_out))
-        return tok_task_out
+    def create_task(self, **kwargs):
+        task_type = kwargs["type"].lower()
+        logging.debug("Creating " + task_type + " task: " + json.dumps(kwargs))
+        task_out = self.request("post", "tasks/", json=kwargs).json()
+        logging.debug("Created " + task_type + " task: " + json.dumps(task_out))
+        return task_out
 
     def submit_tokenization_task(self, **kwargs):
         logging.debug("Submitting tokenization task: " + json.dumps(kwargs))
@@ -163,12 +164,6 @@ class ServerAccessor:
         tok_user_task_out = self.request("put", "user_tasks/%d/submit" % kwargs["id"], json=kwargs).json()
         logging.debug("Submitted tokenization task: " + json.dumps(tok_user_task_out))
         return tok_user_task_out
-
-    def create_annotation_task(self, **kwargs):
-        logging.debug("Creating annotation task: " + json.dumps(kwargs))
-        ann_task_out = self.request("post", "tasks/", json=kwargs).json()
-        logging.debug("Created annotation task: " + json.dumps(ann_task_out))
-        return ann_task_out
 
     def submit_annotation_task(self, **kwargs):
         logging.debug("Submitting annotation task: " + json.dumps(kwargs))

@@ -41,7 +41,7 @@ class StreusselPassageUploader(ServerAccessor):
                 task_in = dict(type="TOKENIZATION", status="SUBMITTED", project=self.project,
                                user=self.user, passage=passage_out, manager_comment="External ID: " + external_id,
                                user_comment="", parent=None, is_demo=False, is_active=True)
-                tok_task_out = self.create_tokenization_task(**task_in)
+                tok_task_out = self.create_task(**task_in)
                 tok_user_task_in = dict(tok_task_out)
 
                 passage = list(from_text(passage_text.split(), tokenized=True))[0]

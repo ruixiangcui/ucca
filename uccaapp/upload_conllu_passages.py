@@ -59,7 +59,7 @@ class ConlluPassageUploader(ServerAccessor):
         task_in = dict(type="TOKENIZATION", status="SUBMITTED", project=self.project, user=self.user,
                        passage=passage_out, manager_comment="External ID: "+external_id,
                        user_comment="", parent=None, is_demo=False, is_active=True)
-        tok_task_out = self.create_tokenization_task(**task_in)
+        tok_task_out = self.create_task(**task_in)
         tok_user_task_in = dict(tok_task_out)
         passage = list(from_text(tokens, tokenized=True))[0]
         tok_user_task_in.update(to_json(passage, return_dict=True, tok_task=True))
@@ -67,7 +67,7 @@ class ConlluPassageUploader(ServerAccessor):
         task_in = dict(type="ANNOTATION", status="NOT_STARTED", project=self.project, user=self.annotation_user,
                        passage=tok_task_out["passage"], manager_comment="External ID: "+external_id,
                        user_comment="", parent=tok_task_out, is_demo=False, is_active=True)
-        self.create_annotation_task(**task_in)
+        self.create_task(**task_in)
         print("Uploaded passage "+external_id+" successfully")
 
     @staticmethod

@@ -9,12 +9,11 @@ desc = """Upload a list of tokenization tasks to a project"""
 
 
 class TokenizationTaskCreator(ServerAccessor):
-    def __init__(self, source_id, project_id, **kwargs):
+    def __init__(self, project_id, **kwargs):
         super().__init__(**kwargs)
-        self.set_source(source_id)
         self.set_project(project_id)
 
-    def create_task(self, filename, **kwargs):
+    def create_tokenization_task(self, filename, **kwargs):
         del kwargs
         with open(filename, encoding="utf-8") as f:
             num = 0
@@ -32,7 +31,7 @@ class TokenizationTaskCreator(ServerAccessor):
                                manager_comment="passage #%s" % passage["id"],
                                user_comment="", parent=None,
                                is_demo=False, is_active=True)
-                tok_task_out = self.create_tokenization_task(**task_in)
+                tok_task_out = self.create_task(**task_in)
                 print("Task #%s uploaded." % tok_task_out["id"], file=sys.stderr)
                 num += 1
             print("Uploaded %d tasks successfully." % num, file=sys.stderr)
@@ -41,12 +40,11 @@ class TokenizationTaskCreator(ServerAccessor):
     def add_arguments(argparser):
         argparser.add_argument("filename", help="a file where each line is a <User ID> <Passage ID>")
         ServerAccessor.add_project_id_argument(argparser)
-        ServerAccessor.add_source_id_argument(argparser)
         ServerAccessor.add_arguments(argparser)
 
 
 def main(**kwargs):
-    TokenizationTaskCreator(**kwargs).create_task(**kwargs)
+    TokenizationTaskCreator(**kwargs).create_tokenization_task(**kwargs)
 
 
 if __name__ == "__main__":

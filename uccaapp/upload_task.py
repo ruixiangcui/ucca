@@ -62,12 +62,12 @@ class TaskUploader(ServerAccessor):
         task_in = dict(type="TOKENIZATION", status="SUBMITTED", project=self.project, user=self.user,
                        passage=passage_out, manager_comment=passage.ID, user_comment=passage.ID, parent=None,
                        is_demo=False, is_active=True)
-        tok_task_out = self.create_tokenization_task(**task_in)
+        tok_task_out = self.create_task(**task_in)
         tok_user_task_in = dict(tok_task_out)
         tok_user_task_in.update(to_json(passage, return_dict=True, tok_task=True))
         tok_user_task_out = self.submit_tokenization_task(**tok_user_task_in)
         task_in.update(parent=tok_task_out, type="ANNOTATION")
-        ann_user_task_in = self.create_annotation_task(**task_in)
+        ann_user_task_in = self.create_task(**task_in)
         ann_user_task_in.update(
             to_json(passage, return_dict=True, tok_task=tok_user_task_out, all_categories=self.layer["categories"]))
         ann_user_task_out = self.submit_annotation_task(**ann_user_task_in)
