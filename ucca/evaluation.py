@@ -54,9 +54,14 @@ def get_text(p, positions):
 
 
 def print_tags_and_text(p, yield_tags):
-    for y, tags in sorted(yield_tags.items(), key=lambda x: min(x[0] or [0])):
-        text = " ".join(get_text(p, y))
-        print((",".join(sorted(filter(None, tags))) + ": " + text) if tags else text)
+    text_to_tags = {}
+    for construction, construction_yield_tags in yield_tags.items():
+        for y, tags in construction_yield_tags.items():
+            if construction.criterion is None:  # category from reference yield tags
+                tags = list(tags) + [construction.name]
+            text_to_tags.setdefault((min(y or [-1]), -max(y or [-1]), " ".join(get_text(p, y))), []).extend(tags)
+    for (_, _, text), tags in sorted(text_to_tags.items()):
+        print((",".join(sorted(set(filter(None, tags)))) + ": " + text) if tags else text)
 
 
 def expand_equivalents(tag_set):
@@ -138,11 +143,11 @@ class Evaluator:
         only = [{c: {y: tags for y, tags in d.items() if y not in self.mutual[c]} for c, d in m.items()} for m in maps]
         if self.verbose and self.units and p1 is not None:
             print("==> Mutual Units:")
-            print_tags_and_text(p1, self.mutual[PRIMARY])
+            print_tags_and_text(p1, self.mutual)
             print("==> Only in guessed:")
-            print_tags_and_text(p1, only[0][PRIMARY])
+            print_tags_and_text(p1, only[0])
             print("==> Only in reference:")
-            print_tags_and_text(p2, only[1][PRIMARY])
+            print_tags_and_text(p2, only[1])
 
         error_counters = self.error_counters.get(eval_type, {})
         res = EvaluatorResults((c, SummaryStatistics(len(self.mutual[c]),
