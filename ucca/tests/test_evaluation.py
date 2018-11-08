@@ -205,6 +205,69 @@ def simple2():
     return p
 
 
+def function1():
+    p = core.Passage("1")
+    l0 = layer0.Layer0(p)
+    l1 = layer1.Layer1(p)
+    # 5 terminals (1-5), #5 is punctuation
+    terms = [l0.add_terminal(text=str(i), punct=(i == 5)) for i in range(1, 6)]
+
+    # Scene #1: [H [P 1] [A 2]]
+    ps1 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
+    p1 = l1.add_fnode(ps1, layer1.EdgeTags.Process)
+    a = l1.add_fnode(ps1, layer1.EdgeTags.Participant)
+    p1.add(layer1.EdgeTags.Terminal, terms[0])
+    a.add(layer1.EdgeTags.Terminal, terms[1])
+
+    # Function #1 with terminal 3 - its location should not affect evaluation
+    f = l1.add_fnode(None, layer1.EdgeTags.Function)
+    f.add(layer1.EdgeTags.Terminal, terms[2])
+
+    # Scene #2: [H [A* 2] [S 4]]
+    ps2 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
+    p2 = l1.add_fnode(ps2, layer1.EdgeTags.State)
+    p2.add(layer1.EdgeTags.Terminal, terms[3])
+    l1.add_fnode(ps2, layer1.EdgeTags.Participant, implicit=True)  # implicit should not affect evaluation
+
+    # Punctuation #5 - not under a scene
+    l1.add_punct(ps2, terms[4])  # punctuation should not affect evaluation
+
+    # adding remote argument to scene #2
+    l1.add_remote(ps2, layer1.EdgeTags.Participant, a)
+
+    return p
+
+
+def function2():
+    p = core.Passage("2")
+    l0 = layer0.Layer0(p)
+    l1 = layer1.Layer1(p)
+    # 5 terminals (1-5), #5 is punctuation
+    terms = [l0.add_terminal(text=str(i), punct=(i == 5)) for i in range(1, 6)]
+
+    # Scene #1: [H [S 1] [D 2] [F 2]]
+    ps1 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
+    p1 = l1.add_fnode(ps1, layer1.EdgeTags.State)
+    a = l1.add_fnode(ps1, layer1.EdgeTags.Adverbial)
+    p1.add(layer1.EdgeTags.Terminal, terms[0])
+    a.add(layer1.EdgeTags.Terminal, terms[1])
+    f = l1.add_fnode(ps1, layer1.EdgeTags.Function)
+    f.add(layer1.EdgeTags.Terminal, terms[2])
+
+    # Scene #2: [H [A* 2] [S 4]]
+    ps2 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
+    p2 = l1.add_fnode(ps2, layer1.EdgeTags.State)
+    p2.add(layer1.EdgeTags.Terminal, terms[3])
+
+    # Punctuation #5 - not under a scene
+    l1.add_punct(None, terms[4])
+
+    # adding remote argument to scene #2
+    l1.add_remote(ps2, layer1.EdgeTags.Adverbial, a)
+
+    return p
+
+
 def check_primary_remote(scores, expected):
     for (labeled, construction), score in expected.items() if hasattr(expected, "items") else \
             zip([(l, c) for l, e in scores.evaluators.items() for c in e.results], repeat(expected)):
@@ -234,6 +297,9 @@ def test_evaluate_self(create, units, errors, normalize):
                                  (simple1, simple2, {(LABELED, PRIMARY): 0.6, (LABELED, REMOTE): 0,
                                                      (UNLABELED, PRIMARY): 1, (UNLABELED, REMOTE): 1,
                                                      (WEAK_LABELED, PRIMARY): 0.8, (WEAK_LABELED, REMOTE): 0}),
+                                 (function1, function2, {(LABELED, PRIMARY): 0.6, (LABELED, REMOTE): 0,
+                                                         (UNLABELED, PRIMARY): 1, (UNLABELED, REMOTE): 1,
+                                                         (WEAK_LABELED, PRIMARY): 0.8, (WEAK_LABELED, REMOTE): 0}),
                          ))
 @pytest.mark.parametrize("units", (True, False), ids=("units", ""))
 @pytest.mark.parametrize("errors", (True, False), ids=("errors", ""))
