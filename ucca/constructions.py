@@ -278,6 +278,6 @@ def create_passage_yields(p, *args, **kwargs):
         construction_yield_tags = yield_tags[construction] = {}
         for candidate in candidates:
             terminal_yield = candidate.terminal_yield(construction)
-            if terminal_yield:
-                construction_yield_tags.setdefault(terminal_yield, []).append(candidate.edge.tag)
+            # if terminal_yield:
+            construction_yield_tags.setdefault(terminal_yield, []).append(candidate.edge.tag)
     return yield_tags
