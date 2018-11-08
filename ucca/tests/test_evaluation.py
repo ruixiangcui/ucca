@@ -1,6 +1,7 @@
 from itertools import repeat
 
 import pytest
+from io import StringIO
 
 from ucca import core, layer0, layer1
 from ucca.evaluation import evaluate, LABELED, UNLABELED, WEAK_LABELED
@@ -38,7 +39,7 @@ def passage1():
     l1.add_punct(ps1, terms[9])
 
     # Scene #23: [[11 12 13 14 15 H] [16 L] [17 18 19 H] H]
-    # Scene #2: [[11 12 13 14 P] [15 D]]
+    # Scene #2: [[11 12 13 14 A] [15 D]]
     ps23 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
     ps2 = l1.add_fnode(ps23, layer1.EdgeTags.ParallelScene)
     a2 = l1.add_fnode(ps2, layer1.EdgeTags.Participant)
@@ -83,13 +84,13 @@ def passage2():
     terms = [l0.add_terminal(text=str(i), punct=(i % 10 == 0)) for i in range(1, 21)]
 
     # Linker #1 with terminal 1
-    link1 = l1.add_fnode(None, layer1.EdgeTags.Linker)
+    link1 = l1.add_fnode(None, layer1.EdgeTags.Linker)  # true
     link1.add(layer1.EdgeTags.Terminal, terms[0])
 
     # Scene #1: [[2 3 4 5 P] [6 7 8 9 A] [10 U] H]
-    ps1 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
-    p1 = l1.add_fnode(ps1, layer1.EdgeTags.Process)
-    a1 = l1.add_fnode(ps1, layer1.EdgeTags.Participant)
+    ps1 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)  # true
+    p1 = l1.add_fnode(ps1, layer1.EdgeTags.Process)  # true
+    a1 = l1.add_fnode(ps1, layer1.EdgeTags.Participant)  # true
     p1.add(layer1.EdgeTags.Terminal, terms[1])
     p1.add(layer1.EdgeTags.Terminal, terms[2])
     p1.add(layer1.EdgeTags.Terminal, terms[3])
@@ -101,27 +102,27 @@ def passage2():
     l1.add_punct(ps1, terms[9])
 
     # Scene #23: [[11 12 13 14 15 H] [16 L] [17 18 19 H] H]
-    # Scene #2: [[11 12 13 14 P] [15 D]]
-    ps23 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
-    ps2 = l1.add_fnode(ps23, layer1.EdgeTags.ParallelScene)
-    a2 = l1.add_fnode(ps2, layer1.EdgeTags.ParallelScene)
+    # Scene #2: [[11 12 13 14 H] [15 E]]
+    ps23 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)  # true
+    ps2 = l1.add_fnode(ps23, layer1.EdgeTags.ParallelScene)  # true
+    a2 = l1.add_fnode(ps2, layer1.EdgeTags.ParallelScene)  # false
     a2.add(layer1.EdgeTags.Terminal, terms[10])
     a2.add(layer1.EdgeTags.Terminal, terms[11])
     a2.add(layer1.EdgeTags.Terminal, terms[12])
     a2.add(layer1.EdgeTags.Terminal, terms[13])
-    d2 = l1.add_fnode(ps1, layer1.EdgeTags.Elaborator)
+    d2 = l1.add_fnode(ps1, layer1.EdgeTags.Elaborator)  # false
     d2.add(layer1.EdgeTags.Terminal, terms[14])
 
     # Linker #2: [16 L]
-    link2 = l1.add_fnode(ps23, layer1.EdgeTags.Linker)
+    link2 = l1.add_fnode(ps23, layer1.EdgeTags.Linker)  # true
     link2.add(layer1.EdgeTags.Terminal, terms[15])
 
-    # Scene #3: [[16 17 S] [18 A] (implicit participant) H]
-    ps3 = l1.add_fnode(ps23, layer1.EdgeTags.ParallelScene)
-    p3 = l1.add_fnode(ps3, layer1.EdgeTags.Process)
+    # Scene #3: [[16 17 P] [18 A] (implicit participant) H]
+    ps3 = l1.add_fnode(ps23, layer1.EdgeTags.ParallelScene)  # true
+    p3 = l1.add_fnode(ps3, layer1.EdgeTags.Process)  # false
     p3.add(layer1.EdgeTags.Terminal, terms[16])
     p3.add(layer1.EdgeTags.Terminal, terms[17])
-    a3 = l1.add_fnode(ps3, layer1.EdgeTags.Participant)
+    a3 = l1.add_fnode(ps3, layer1.EdgeTags.Participant)  # true
     a3.add(layer1.EdgeTags.Terminal, terms[18])
     l1.add_fnode(ps3, layer1.EdgeTags.Participant, implicit=True)
 
@@ -271,7 +272,10 @@ def function2():
 def check_primary_remote(scores, expected):
     for (labeled, construction), score in sorted(expected.items()) if hasattr(expected, "items") else \
             zip([(l, c) for l, e in sorted(scores.evaluators.items()) for c in e.results], repeat(expected)):
-        assert score == pytest.approx(scores[labeled][construction].f1), "%s_%s_f1" % (construction, labeled)
+        buf = StringIO()
+        scores.print(file=buf)
+        assert score == pytest.approx(scores[labeled][construction].f1), "%s_%s_f1\n%s" % (construction, labeled,
+                                                                                           buf.getvalue())
 
 
 @pytest.mark.parametrize("create", PASSAGES + (passage1, passage2, simple1, simple2, function1, function2))
