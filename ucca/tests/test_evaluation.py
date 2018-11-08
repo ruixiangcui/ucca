@@ -269,8 +269,8 @@ def function2():
 
 
 def check_primary_remote(scores, expected):
-    for (labeled, construction), score in expected.items() if hasattr(expected, "items") else \
-            zip([(l, c) for l, e in scores.evaluators.items() for c in e.results], repeat(expected)):
+    for (labeled, construction), score in sorted(expected.items()) if hasattr(expected, "items") else \
+            zip([(l, c) for l, e in sorted(scores.evaluators.items()) for c in e.results], repeat(expected)):
         assert score == pytest.approx(scores[labeled][construction].f1), "%s_%s_f1" % (construction, labeled)
 
 
@@ -282,7 +282,7 @@ def test_evaluate_self(create, units, errors, normalize):
     p = create()
     scores = evaluate(p, p, units=units, errors=errors, normalize=normalize)
     assert 1.0 == scores.average_f1()
-    for eval_type, results in scores.evaluators.items():
+    for eval_type, results in sorted(scores.evaluators.items()):
         for construction, stats in results.results.items():
             assert 1.0 == stats.f1, (eval_type, construction)
             assert 1.0 == stats.p, (eval_type, construction)
