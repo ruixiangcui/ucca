@@ -274,7 +274,7 @@ def check_primary_remote(scores, expected):
         assert score == pytest.approx(scores[labeled][construction].f1), "%s_%s_f1" % (construction, labeled)
 
 
-@pytest.mark.parametrize("create", PASSAGES + (passage1, passage2))
+@pytest.mark.parametrize("create", PASSAGES + (passage1, passage2, simple1, simple2, function1, function2))
 @pytest.mark.parametrize("units", (True, False), ids=("units", ""))
 @pytest.mark.parametrize("errors", (True, False), ids=("errors", ""))
 @pytest.mark.parametrize("normalize", (True, False), ids=("normalize", ""))
