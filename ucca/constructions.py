@@ -31,6 +31,10 @@ class Construction:
         if self.criterion(candidate):
             yield self
 
+    @property
+    def is_punct(self):
+        return self.name in (EdgeTags.Punctuation, layer0.NodeTags.Punct, "punct")
+
 
 CATEGORIES_NAME = "categories"
 CATEGORY_DESCRIPTIONS = {v: k for k, v in EdgeTags.__dict__.items() if not k.startswith("_")}
@@ -60,7 +64,7 @@ class Candidate:
         self.reference_yield_tags = reference_yield_tags
         self.verbose = verbose
         self.terminals = self.edge.child.get_terminals()
-        self.terminal_yield, self.terminal_yield_no_punct = [frozenset(t.position for t in ts) for ts in (
+        self._terminal_yield, self._terminal_yield_no_punct = [frozenset(t.position for t in ts) for ts in (
             self.terminals, self.edge.child.get_terminals(punct=False))]
         if self.reference is not None:
             self.terminals = [self.reference.by_id(t.ID) for t in self.terminals]
@@ -123,16 +127,25 @@ class Candidate:
 
     def is_predicate(self):
         return self.edge.tag in {EdgeTags.Process, EdgeTags.State} and \
-            self.out_tags <= {EdgeTags.Center, EdgeTags.Function, EdgeTags.Terminal} and \
-            "to" not in self.tokens
+               self.out_tags <= {EdgeTags.Center, EdgeTags.Function, EdgeTags.Terminal} and \
+               "to" not in self.tokens
 
     def constructions(self, constructions=None):
         for construction in constructions or [ALL_EDGES]:
             if construction.name == CATEGORIES_NAME and self.reference_yield_tags is not None:
-                for tag in self.reference_yield_tags.get(self.terminal_yield, ()):
-                    yield from construction(tag)
+                for terminal_yield, is_punct in (self._terminal_yield, True), (self._terminal_yield_no_punct, False):
+                    for tag in self.reference_yield_tags.get(terminal_yield, ()):
+                        for category_construction in construction(tag):
+                            if category_construction.is_punct == is_punct:
+                                yield category_construction
             else:
                 yield from construction(self)
+
+    def terminal_yield(self, construction):
+        return self._terminal_yield if construction.is_punct else self._terminal_yield_no_punct
+
+    def __str__(self):
+        return "[%s %s]" % (self.edge.tag, self.edge.child)
 
 
 EXCLUDED_EDGE_TAGS = (EdgeTags.Punctuation,
@@ -144,7 +157,6 @@ EXCLUDED_NODE_TAGS = (NodeTags.Linkage,
                       NodeTags.Punctuation,
                       layer0.NodeTags.Word,
                       layer0.NodeTags.Punct)
-
 
 CONSTRUCTIONS = (
     Construction("primary", "Regular edges", Candidate.is_primary, default=True),
@@ -254,10 +266,9 @@ def extract_edges(passage, constructions=None, reference=None, reference_yield_t
                        if candidates)
 
 
-def create_passage_yields(p, *args, punct=False, **kwargs):
+def create_passage_yields(p, *args, **kwargs):
     """
     :param p: passage to find terminal yields of
-    :param punct: whether to include punctuation in terminal yield
     :returns: dict: Construction ->
                    dict: set of terminal indices (excluding punctuation) ->
                          list of edges of the Construction whose yield (excluding remotes and punctuation) is that set
@@ -266,6 +277,7 @@ def create_passage_yields(p, *args, punct=False, **kwargs):
     for construction, candidates in extract_candidates(p, *args, **kwargs).items():
         construction_yield_tags = yield_tags[construction] = {}
         for candidate in candidates:
-            terminal_yield = candidate.terminal_yield if punct else candidate.terminal_yield_no_punct
-            construction_yield_tags.setdefault(terminal_yield, []).append(candidate.edge.tag)
+            terminal_yield = candidate.terminal_yield(construction)
+            if terminal_yield:
+                construction_yield_tags.setdefault(terminal_yield, []).append(candidate.edge.tag)
     return yield_tags
