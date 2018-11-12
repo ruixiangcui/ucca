@@ -19,8 +19,12 @@ def upload_passage(xml_root, site_filename=None, verbose=False, **kwargs):
 
 
 def main(args):
+    filenames = list(args.passages)
+    if args.filenames:
+        with open(args.filenames, encoding="utf-8") as f:
+            filenames += list(filter(None, map(str.strip, f)))
     with open(args.out, "w", encoding="utf-8") as f:
-        for passage in get_passages_with_progress_bar(args.passages):
+        for passage in get_passages_with_progress_bar(filenames):
             out = upload_passage(convert.to_site(passage), verbose=args.verbose,
                                  site_filename=passage.ID + "_site_upload.xml" if args.write_site else None,
                                  db_name=args.db_name, host_name=args.host_name,
@@ -35,7 +39,8 @@ def main(args):
 
 if __name__ == "__main__":
     argparser = ArgumentParser(description=desc)
-    argparser.add_argument("passages", nargs="+", help="the corpus, given as xml/pickle file names")
+    argparser.add_argument("passages", nargs="*", help="the corpus, given as xml/pickle file names")
+    argparser.add_argument("-f", "--filenames", help="read input passages filenames from file rather than command line")
     argparser.add_argument("-d", "--db-name", default="work", help="database name")
     argparser.add_argument("-H", "--host-name", default="pgserver", help="host name")
     argparser.add_argument("-p", "--project-id", default="63", help="project ID")
