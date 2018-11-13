@@ -82,18 +82,18 @@ def get_by_xids(host_name, db_name, xids, **kwargs):
 def get_most_recent_passage_by_uid(uid, passage_id, host_name, db_name, verbose=False, write_xids=None, **kwargs):
     del kwargs
     c = get_cursor(host_name, db_name)
-    c.execute("SELECT xml,status,ts,id FROM xmls WHERE uid=%s AND paid = %s ORDER BY ts DESC", (uid, passage_id))
+    uid = (uid,) if isinstance(uid, (str, int)) else tuple(uid)
+    c.execute("SELECT xml,status,ts,id,uid FROM xmls WHERE uid IN %s AND paid = %s ORDER BY ts DESC", (uid, passage_id))
     queryset = c.fetchone()
     if queryset is None:
-        raise Exception("The user " + uid + " did not annotate passage " + passage_id)
-    raw_xml, status, ts, xid = queryset
+        raise Exception("The user %s did not annotate passage %s" % (uid, passage_id))
+    raw_xml, status, ts, xid, uid = queryset
     if int(status) != 1:  # if not submitted
         with external_write_mode():
-            print("The most recent xml for uid " + uid + " and paid " + passage_id + " is not submitted.",
-                  file=sys.stderr)
+            print("The most recent xml for uid %s and paid %s is not submitted." % (uid, passage_id), file=sys.stderr)
     if verbose:
         with external_write_mode():
-            print("Timestamp: %s, xid: %d" % (ts, xid))
+            print("Timestamp: %s, uid: %d, xid: %d" % (ts, uid, xid))
     if write_xids:
         with open(write_xids, "a") as f:
             print(xid, file=f)
