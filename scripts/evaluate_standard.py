@@ -66,7 +66,7 @@ def summarize(args, results, eval_type):
                 if args.fscore:
                     summary.print()
                 elif args.errors:
-                    summary.print_confusion_matrix()
+                    summary.print_confusion_matrix(as_table=args.as_table)
         if not args.quiet:
             print_f1(summary, eval_type=eval_type)
     if args.out_file:
@@ -114,6 +114,7 @@ if __name__ == "__main__":
                            help="do not normalize passages before evaluation")
     argparser.add_argument("-I", "--no-match-by-id", dest="match_by_id", action="store_false",
                            help="do not match passages by ID, instead matching by order")
+    argparser.add_argument("--as-table", action="store_true", help="if given --errors, print confusion matrix as table")
     argparser.add_argument("--unlabeled", action="store_true", help="only unlabeled evaluation")
     argparser.add_argument("--out-file", help="file to write results for each evaluated passage to, in CSV format")
     argparser.add_argument("--summary-file", help="file to write aggregated scores to, in CSV format")
