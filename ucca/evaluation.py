@@ -215,7 +215,7 @@ class Scores:
 
     def fields(self, eval_type=LABELED, counts=False):
         e = self[eval_type]
-        attrs = ("num_guessed", "num_ref") if counts else ("p", "r", "f1")
+        attrs = ("num_guessed", "num_ref", "num_matches") if counts else ("p", "r", "f1")
         return ["%.3f" % float(getattr(x, y)) for x in e.results.values() for y in attrs]
 
     def titles(self, eval_type=LABELED, counts=False):
@@ -223,7 +223,7 @@ class Scores:
 
     @staticmethod
     def field_titles(constructions=DEFAULT, eval_type=LABELED, counts=False):
-        titles = ("guessed", "ref") if counts else ("precision", "recall", "f1")
+        titles = ("guessed", "ref", "matches") if counts else ("precision", "recall", "f1")
         return ["_".join(((str(x),) if len(constructions) > 1 else ()) + (eval_type, y))
                 for x in constructions for y in titles]
 
