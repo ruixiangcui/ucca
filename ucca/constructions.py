@@ -132,12 +132,14 @@ class Candidate:
 
     def constructions(self, constructions=None):
         for construction in constructions or [ALL_EDGES]:
-            if construction.name == CATEGORIES_NAME and self.reference_yield_tags is not None and not self.is_remote():
-                for terminal_yield, is_punct in (self._terminal_yield, True), (self._terminal_yield_no_punct, False):
-                    for tag in self.reference_yield_tags.get(terminal_yield, ()):
-                        for category_construction in construction(tag):
-                            if category_construction.is_punct == is_punct:
-                                yield category_construction
+            if construction.name == CATEGORIES_NAME and self.reference_yield_tags is not None:
+                if not self.is_remote():
+                    for terminal_yield, is_punct in (self._terminal_yield, True), \
+                                                    (self._terminal_yield_no_punct, False):
+                        for tag in self.reference_yield_tags.get(terminal_yield, ()):
+                            for category_construction in construction(tag):
+                                if category_construction.is_punct == is_punct:
+                                    yield category_construction
             else:
                 yield from construction(self)
 
