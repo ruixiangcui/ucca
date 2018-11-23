@@ -155,12 +155,8 @@ class Evaluator:
                                                      len(only[1].get(c, ())),
                                                      error_counters.get(c)))
                                for c in self.mutual)
-        if self.verbose:
-            if self.fscore:
-                res.print()
-            if self.errors and error_counters:
-                res.print_confusion_matrix()
-
+        if self.verbose and self.fscore:
+            res.print()
         return res
 
 

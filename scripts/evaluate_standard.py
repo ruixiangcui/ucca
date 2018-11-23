@@ -14,17 +14,21 @@ def main(args):
         ref_yield_tags = match_by_id(ref_yield_tags, ref)
     results = []
     eval_type = evaluation.UNLABELED if args.unlabeled else evaluation.LABELED
+    verbose = args.verbose or len(guessed) == 1
     for g, r, ryt in zip(guessed, ref, ref_yield_tags or repeat(None)):
         if len(guessed) > 1:
             print("Evaluating %s%s" % (g.ID, ":" if args.verbose else "..."), end="\r", flush=True)
         if args.verbose:
             print()
         result = evaluation.evaluate(g, r, constructions=args.constructions, units=args.units, fscore=args.fscore,
-                                     errors=args.errors, verbose=args.verbose or len(guessed) == 1,
+                                     errors=args.errors, verbose=verbose,
                                      normalize=args.normalize, ref_yield_tags=ryt,
                                      eval_type=evaluation.UNLABELED if args.unlabeled else None)
-        if args.verbose:
-            print_f1(result, eval_type)
+        if verbose:
+            if args.errors:
+                result.print_confusion_matrix(as_table=args.as_table)
+            if not args.quiet:
+                print_f1(result, eval_type)
         results.append(result)
     summarize(args, results, eval_type=eval_type)
 
