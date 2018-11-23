@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """The evaluation script for UCCA layer 1."""
-import sys
-from itertools import repeat
-
 from argparse import ArgumentParser
+from itertools import repeat
 
 from ucca import evaluation, constructions, ioutil
 
@@ -18,8 +16,7 @@ def main(args):
     eval_type = evaluation.UNLABELED if args.unlabeled else evaluation.LABELED
     for g, r, ryt in zip(guessed, ref, ref_yield_tags or repeat(None)):
         if len(guessed) > 1:
-            sys.stdout.write("\rEvaluating %s%s" % (g.ID, ":" if args.verbose else "..."))
-            sys.stdout.flush()
+            print("Evaluating %s%s" % (g.ID, ":" if args.verbose else "..."), end="\r", flush=True)
         if args.verbose:
             print()
         result = evaluation.evaluate(g, r, constructions=args.constructions, units=args.units, fscore=args.fscore,
@@ -40,8 +37,7 @@ def match_by_id(guessed, ref):
     if len(guessed) > 1:
         guessed_by_id = {}
         for g in guessed:
-            sys.stdout.write("\rReading %s..." % g.ID)
-            sys.stdout.flush()
+            print("Reading %s..." % g.ID, end="\r", flush=True)
             guessed_by_id[g.ID] = g
         ids = [p.ID for p in ref]
         try:
@@ -61,25 +57,25 @@ def summarize(args, results, eval_type):
         if args.verbose:
             print("Aggregated scores:")
         else:
-            print(end="\r")
             if not args.quiet:
                 if args.fscore:
                     summary.print()
                 elif args.errors:
+                    print(args.guessed, args.ref)
                     summary.print_confusion_matrix(as_table=args.as_table)
         if not args.quiet:
             print_f1(summary, eval_type=eval_type)
     if args.out_file:
         with open(args.out_file, "w", encoding="utf-8") as f:
-            print(",".join(summary.titles(eval_type=eval_type)), file=f)
+            print(*summary.titles(eval_type=eval_type), sep=",", file=f)
             for result in results:
-                print(",".join(result.fields(eval_type=eval_type)), file=f)
+                print(*result.fields(eval_type=eval_type), sep=",", file=f)
         print("Wrote '%s'" % args.out_file)
     for filename, counts in ((args.summary_file, False), (args.counts_file, True)):
         if filename:
             with open(filename, "w", encoding="utf-8") as f:
-                print(",".join(summary.titles(eval_type=eval_type, counts=counts)), file=f)
-                print(",".join(summary.fields(eval_type=eval_type, counts=counts)), file=f)
+                print(*summary.titles(eval_type=eval_type, counts=counts), sep=",", file=f)
+                print(*summary.fields(eval_type=eval_type, counts=counts), sep=",", file=f)
             print("Wrote '%s'" % filename)
     if args.errors_file:
         with open(args.errors_file, "w", encoding="utf-8") as f:

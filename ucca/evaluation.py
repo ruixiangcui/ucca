@@ -8,7 +8,6 @@ v1.2
 """
 from collections import Counter, OrderedDict
 from itertools import groupby
-
 from operator import attrgetter
 
 from ucca import layer0, layer1, normalization
@@ -256,22 +255,23 @@ class EvaluatorResults:
                 print(sep.join(("guessed", "ref", "count")), **kwargs)
                 for error, freq in errors:
                     print(sep.join(error + (str(freq),)), **kwargs)
-            elif as_table:
-                y_labels = sorted(set(y for x in errors for y in x[0][1].split("|")))
-                print("", *y_labels, sep="\t")
-                for xs, x_errors in groupby(sorted(errors), key=lambda x: x[0][0].split("|")[0]):
-                    errors_by_y = Counter()
-                    for (_, ys), f in x_errors:
-                        for y in ys.split("|"):
-                            errors_by_y[y] += f
-                    for x in xs.split("|"):
-                        print(x, *[errors_by_y.get(y, 0) for y in y_labels], sep="\t")
             else:
                 print("\n%sConfusion Matrix:" % ("" if prefix is None else (prefix + ", ")), **kwargs)
-                for error, freq in errors:
-                    l1 = max(len(e1) for e1, _ in primary.errors)
-                    l2 = max(len(e2) for _, e2 in primary.errors)
-                    print("%-*s %-*s %d" % (l1, error[0], l2, error[1], freq), **kwargs)
+                if as_table:
+                    y_labels = sorted(set(y for x in errors for y in x[0][1].split("|")))
+                    print("", *y_labels, sep="\t")
+                    for xs, x_errors in groupby(sorted(errors), key=lambda x: x[0][0].split("|")[0]):
+                        errors_by_y = Counter()
+                        for (_, ys), f in x_errors:
+                            for y in ys.split("|"):
+                                errors_by_y[y] += f
+                        for x in xs.split("|"):
+                            print(x, *[errors_by_y.get(y, 0) for y in y_labels], sep="\t")
+                else:
+                    for error, freq in errors:
+                        l1 = max(len(e1) for e1, _ in primary.errors)
+                        l2 = max(len(e2) for _, e2 in primary.errors)
+                        print("%-*s %-*s %d" % (l1, error[0], l2, error[1], freq), **kwargs)
 
     @classmethod
     def aggregate(cls, results):
