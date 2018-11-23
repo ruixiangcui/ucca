@@ -7,7 +7,7 @@ v1.2
 2018-04-12: exclude punctuation nodes regardless of edge tag
 """
 from collections import Counter, OrderedDict
-from itertools import groupby, product
+from itertools import groupby
 from operator import attrgetter
 
 from ucca import layer0, layer1, normalization
@@ -137,26 +137,23 @@ class Evaluator:
                 yield_tags2 = maps[1].get(construction, {})
                 self.find_mutuals(yield_tags1, yield_tags2, eval_type, construction)
 
-        if self.verbose:
-            print("Evaluation type: (" + eval_type + ")")
-
         only = [{c: {y: tags for y, tags in d.items() if y not in self.mutual[c]} for c, d in m.items()} for m in maps]
-        if self.verbose and self.units and p1 is not None:
-            print("==> Mutual Units:")
-            print_tags_and_text(p1, self.mutual)
-            print("==> Only in guessed:")
-            print_tags_and_text(p1, only[0])
-            print("==> Only in reference:")
-            print_tags_and_text(p2, only[1])
-
         error_counters = self.error_counters.get(eval_type, {})
         res = EvaluatorResults((c, SummaryStatistics(len(self.mutual[c]),
                                                      len(only[0].get(c, ())),
                                                      len(only[1].get(c, ())),
-                                                     error_counters.get(c)))
-                               for c in self.mutual)
-        if self.verbose and self.fscore:
-            res.print()
+                                                     error_counters.get(c))) for c in self.mutual)
+        if self.verbose:
+            print("Evaluation type: (" + eval_type + ")")
+            if self.units and p1 is not None:
+                print("==> Mutual Units:")
+                print_tags_and_text(p1, self.mutual)
+                print("==> Only in guessed:")
+                print_tags_and_text(p1, only[0])
+                print("==> Only in reference:")
+                print_tags_and_text(p2, only[1])
+            if self.fscore:
+                res.print()
         return res
 
 
