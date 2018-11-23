@@ -7,7 +7,7 @@ v1.2
 2018-04-12: exclude punctuation nodes regardless of edge tag
 """
 from collections import Counter, OrderedDict
-from itertools import groupby
+from itertools import groupby, product
 from operator import attrgetter
 
 from ucca import layer0, layer1, normalization
@@ -254,15 +254,13 @@ class EvaluatorResults:
             else:
                 print("\n%sConfusion Matrix:" % ("" if prefix is None else (prefix + ", ")), **kwargs)
                 if as_table:
-                    y_labels = sorted(set(y for x in errors for y in x[0][1].split("|")))
+                    y_labels = sorted(set(x[0][1] for x in errors))
                     print("", *y_labels, sep="\t")
-                    for xs, x_errors in groupby(sorted(errors), key=lambda x: x[0][0].split("|")[0]):
+                    for x, x_errors in groupby(sorted(errors), key=lambda x: x[0][0]):
                         errors_by_y = Counter()
-                        for (_, ys), f in x_errors:
-                            for y in ys.split("|"):
-                                errors_by_y[y] += f
-                        for x in xs.split("|"):
-                            print(x, *[errors_by_y.get(y, 0) for y in y_labels], sep="\t")
+                        for (_, y), f in x_errors:
+                            errors_by_y[y] += f
+                        print(x, *[errors_by_y.get(y, 0) for y in y_labels], sep="\t")
                 else:
                     for error, freq in errors:
                         l1 = max(len(e1) for e1, _ in primary.errors)
