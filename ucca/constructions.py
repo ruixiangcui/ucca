@@ -119,11 +119,14 @@ class Candidate:
             ret = self.extra[attr] = {t.text.lower() for t in self.terminals}
         return ret
 
+    def is_punct(self):
+        return self.edge.tag == EdgeTags.Punctuation or self.edge.child.tag == NodeTags.Punctuation
+
     def is_primary(self):
-        return not self.remote and not self.implicit and not self.excluded
+        return not self.remote and not self.implicit and not self.is_punct()
 
     def is_remote(self):
-        return self.remote and not self.implicit and not self.excluded
+        return self.remote and not self.implicit and not self.is_punct()
 
     def is_predicate(self):
         return self.edge.tag in {EdgeTags.Process, EdgeTags.State} and \
@@ -150,13 +153,11 @@ class Candidate:
         return "[%s %s]" % (self.edge.tag, self.edge.child)
 
 
-EXCLUDED_EDGE_TAGS = (EdgeTags.Punctuation,
-                      EdgeTags.LinkArgument,
+EXCLUDED_EDGE_TAGS = (EdgeTags.LinkArgument,
                       EdgeTags.LinkRelation,
                       EdgeTags.Terminal)
 
 EXCLUDED_NODE_TAGS = (NodeTags.Linkage,
-                      NodeTags.Punctuation,
                       layer0.NodeTags.Word,
                       layer0.NodeTags.Punct)
 
@@ -246,8 +247,9 @@ def extract_candidates(passage, constructions=None, reference=None, reference_yi
             keys.append(construction)
     extracted = OrderedDict((c, []) for c in keys)
     for candidate in get_candidates(passage, reference, reference_yield_tags, verbose):
-        for construction in candidate.constructions(constructions):
-            extracted.setdefault(construction, []).append(candidate)
+        if not candidate.excluded:
+            for construction in candidate.constructions(constructions):
+                extracted.setdefault(construction, []).append(candidate)
     return extracted
 
 
