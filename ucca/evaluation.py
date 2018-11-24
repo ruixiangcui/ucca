@@ -93,6 +93,8 @@ class Evaluator:
 
     def find_mutuals(self, m1, m2, eval_type, construction):
         mutual_tags = self.mutual.setdefault(construction, {})
+        counter = self.error_counters.setdefault(eval_type, {}).setdefault(construction, Counter()) if self.errors \
+            else None
         for y in m1.keys() & m2.keys():
             if eval_type == UNLABELED:
                 mutual_tags[y] = ()
@@ -103,9 +105,13 @@ class Evaluator:
                 intersection = set.intersection(*tags)
                 if intersection:  # non-empty intersection
                     mutual_tags[y] = intersection
-                elif self.errors:
-                    self.error_counters.setdefault(eval_type, {}).setdefault(construction, Counter())[
-                        tuple("|".join(sorted(t)) for t in tags)] += 1
+                if self.errors:
+                    counter[tuple("|".join(sorted(t)) for t in tags)] += 1
+        if self.errors:
+            for y in m1.keys() - m2.keys():
+                counter[("|".join(sorted(m1[y])), "<UNMATCHED>")] += 1
+            for y in m2.keys() - m1.keys():
+                counter[("<UNMATCHED>", "|".join(sorted(m2[y])))] += 1
 
     def get_scores(self, p1, p2, eval_type, r=None):
         """
