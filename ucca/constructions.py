@@ -56,6 +56,10 @@ def create_category_construction(tag):
     return Construction(tag, CATEGORY_DESCRIPTIONS.get(tag, tag), criterion=None)
 
 
+def positions(terminals):
+    return frozenset(t.position for t in terminals)
+
+
 class Candidate:
     def __init__(self, edge, reference=None, reference_yield_tags=None, verbose=False):
         self.edge = edge
@@ -64,11 +68,12 @@ class Candidate:
         self.reference_yield_tags = reference_yield_tags
         self.verbose = verbose
         self.terminals = self.edge.child.get_terminals()
-        self._terminal_yield, self._terminal_yield_no_punct = [frozenset(t.position for t in ts) for ts in (
-            self.terminals, self.edge.child.get_terminals(punct=False))]
+        self._terminal_yield = positions(self.terminals)
+        self._terminal_yield_no_punct = positions(self.edge.child.get_terminals(punct=False))
         if self.reference is not None:
             self.terminals = [self.reference.by_id(t.ID) for t in self.terminals]
         self.extra = {}
+        self.is_unary_child = (self._terminal_yield_no_punct == positions(self.edge.parent.get_terminals(punct=False)))
 
     def _annotate(self, attr=None):
         passage = self.edge.parent.root
@@ -248,18 +253,20 @@ def extract_candidates(passage, constructions=None, reference=None, reference_yi
     return extracted
 
 
-def create_passage_yields(p, *args, **kwargs):
+def create_passage_yields(p, *args, tags=True, **kwargs):
     """
     :param p: passage to find terminal yields of
+    :param tags: instead of Candidates, map simply to their edge tags
     :returns: dict: Construction ->
                    dict: set of terminal indices (excluding punctuation) ->
-                         list of edges of the Construction whose yield (excluding remotes and punctuation) is that set
+                         list of Candidates whose yield (excluding remotes and punctuation) is that set
     """
-    yield_tags = OrderedDict()
+    yield_candidates = OrderedDict()
     for construction, candidates in extract_candidates(p, *args, **kwargs).items():
-        construction_yield_tags = yield_tags[construction] = {}
+        construction_yield_candidates = yield_candidates[construction] = {}
         for candidate in candidates:
             terminal_yield = candidate.terminal_yield(construction)
             # if terminal_yield:
-            construction_yield_tags.setdefault(terminal_yield, []).append(candidate.edge.tag)
-    return yield_tags
+            construction_yield_candidates.setdefault(terminal_yield, []).append(
+                candidate.edge.tag if tags else candidate)
+    return yield_candidates
