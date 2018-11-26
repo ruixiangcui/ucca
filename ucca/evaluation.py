@@ -103,8 +103,8 @@ class Evaluator:
                     mutual_tags[y] = intersection
         if counter is not None:
             for y in m1.keys() | m2.keys():
-                counter[tuple("|".join(sorted(set(c.edge.tag for c in m.get(y, ()) if not c.is_unary_child)))
-                              or "<UNMATCHED>" for m in (m1, m2))] += 1
+                tags = [sorted(set(c.edge.tag for c in m.get(y, ()) if not c.is_unary_child)) for m in (m1, m2)]
+                counter[tuple("|".join(t) or "<UNMATCHED>" for t in tags)] += 1
 
     def get_scores(self, p1, p2, eval_type, r=None):
         """
