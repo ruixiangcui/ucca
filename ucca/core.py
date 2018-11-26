@@ -588,6 +588,10 @@ class Node:
             else:
                 waiting = to_add + waiting
 
+    def get_terminals(self, *args, **kwargs):
+        """Returns a list of all terminals under the span of this Node."""
+        return [t for e in self._outgoing for t in e.child.get_terminals(*args, **kwargs)]
+
 
 class Layer:
     """Group of similar :class:`Node` objects in UCCA annotation graph.
