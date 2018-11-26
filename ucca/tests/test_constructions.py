@@ -1,7 +1,9 @@
+from collections import OrderedDict
+
 import pytest
 
 from ucca import textutil
-from ucca.constructions import extract_edges, CATEGORIES_NAME, DEFAULT, CONSTRUCTIONS
+from ucca.constructions import CATEGORIES_NAME, DEFAULT, CONSTRUCTIONS, extract_candidates
 from .conftest import PASSAGES, loaded, loaded_valid, multi_sent, crossing, discontiguous, l1_passage, empty
 
 """Tests the constructions module functions and classes."""
@@ -13,7 +15,8 @@ def assert_spacy_not_loaded(*args, **kwargs):
 
 
 def extract_and_check(p, constructions=None, expected=None):
-    d = extract_edges(p, constructions=constructions)
+    d = OrderedDict((construction, [candidate.edge for candidate in candidates]) for construction, candidates in
+                    extract_candidates(p, constructions=constructions).items() if candidates)
     if expected is not None:
         hist = {c.name: len(e) for c, e in d.items()}
         assert hist == expected, " != ".join(",".join(sorted(h)) for h in (hist, expected))

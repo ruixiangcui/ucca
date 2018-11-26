@@ -253,23 +253,6 @@ def extract_candidates(passage, constructions=None, reference=None, reference_yi
     return extracted
 
 
-def extract_edges(passage, constructions=None, reference=None, reference_yield_tags=None, verbose=False):
-    """
-    Find edges by constructions in UCCA passage.
-    :param passage: Passage object to find constructions in
-    :param constructions: list of constructions to include or None for all
-    :param reference: Passage object to get POS tags from (default: `passage')
-    :param reference_yield_tags: yield tags from reference passage for fine-grained evaluation:
-                   dict: set of terminal indices (excluding punctuation) ->
-                   list of edges of the Construction whose yield (excluding remotes and punctuation) is that set
-    :param verbose: whether to print tagged text
-    :return: dict of Construction -> list of corresponding edges
-    """
-    return OrderedDict((construction, [candidate.edge for candidate in candidates]) for construction, candidates in
-                       extract_candidates(passage, constructions, reference, reference_yield_tags, verbose).items()
-                       if candidates)
-
-
 def create_passage_yields(p, *args, **kwargs):
     """
     :param p: passage to find terminal yields of
