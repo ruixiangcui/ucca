@@ -73,7 +73,8 @@ class Candidate:
         if self.reference is not None:
             self.terminals = [self.reference.by_id(t.ID) for t in self.terminals]
         self.extra = {}
-        self.is_unary_child = (self._terminal_yield_no_punct == positions(self.edge.parent.get_terminals(punct=False)))
+        self.is_unary_child = self.edge.parent.incoming and (
+                self._terminal_yield_no_punct == positions(self.edge.parent.get_terminals(punct=False)))
 
     def _annotate(self, attr=None):
         passage = self.edge.parent.root
