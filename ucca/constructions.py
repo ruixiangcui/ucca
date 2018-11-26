@@ -216,13 +216,6 @@ def verify_terminals_match(passage, reference):
                           "\n".join(map(str, diff_terminals(passage, reference))))
 
 
-def get_candidates(passage, reference=None, reference_yield_tags=None, verbose=False):
-    for node in passage.layer(layer1.LAYER_ID).all:
-        for edge in node:
-            yield Candidate(edge, reference=reference or passage, reference_yield_tags=reference_yield_tags,
-                            verbose=verbose)
-
-
 def extract_candidates(passage, constructions=None, reference=None, reference_yield_tags=None, verbose=False):
     """
     Find candidate edges by constructions in UCCA passage.
@@ -246,10 +239,12 @@ def extract_candidates(passage, constructions=None, reference=None, reference_yi
         else:
             keys.append(construction)
     extracted = OrderedDict((c, []) for c in keys)
-    for candidate in get_candidates(passage, reference, reference_yield_tags, verbose):
-        if not candidate.excluded:
-            for construction in candidate.constructions(constructions):
-                extracted.setdefault(construction, []).append(candidate)
+    for node in passage.layer(layer1.LAYER_ID).all:
+        for edge in node:
+            candidate = Candidate(edge, reference or passage, reference_yield_tags, verbose=verbose)
+            if not candidate.excluded:
+                for construction in candidate.constructions(constructions):
+                    extracted.setdefault(construction, []).append(candidate)
     return extracted
 
 
