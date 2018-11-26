@@ -95,19 +95,16 @@ class Evaluator:
             if eval_type == UNLABELED:
                 mutual_tags[y] = ()
             else:
-                tags = [set(m1[y]), set(m2[y])]
+                tags = [set(c.edge.tag for c in m[y]) for m in (m1, m2)]
                 if eval_type == WEAK_LABELED:
                     tags[0] = expand_equivalents(tags[0])
                 intersection = set.intersection(*tags)
                 if intersection:  # non-empty intersection
                     mutual_tags[y] = intersection
-                if counter is not None:
-                    counter[tuple("|".join(sorted(t)) for t in tags)] += 1
         if counter is not None:
-            for y in m1.keys() - m2.keys():
-                counter[("|".join(sorted(m1[y])), "<UNMATCHED>")] += 1
-            for y in m2.keys() - m1.keys():
-                counter[("<UNMATCHED>", "|".join(sorted(m2[y])))] += 1
+            for y in m1.keys() | m2.keys():
+                counter[tuple("|".join(sorted(set(c.edge.tag for c in m.get(y, ()) if not c.is_unary_child)))
+                              or "<UNMATCHED>" for m in (m1, m2))] += 1
 
     def get_scores(self, p1, p2, eval_type, r=None):
         """
@@ -126,20 +123,17 @@ class Evaluator:
         mutual = OrderedDict()
         counters = OrderedDict()
         reference_yield_tags = None if r is None else create_passage_yields(r)[ALL_EDGES.name]
-        maps = [{}, create_passage_yields(p2, self.constructions,
-                                          reference_yield_tags=reference_yield_tags)]
+        maps = [{} if p is None else create_passage_yields(p, self.constructions, tags=False, reference=p2,
+                                                           reference_yield_tags=reference_yield_tags) for p in (p1, p2)]
         if p1 is not None:
-            maps[0] = create_passage_yields(p1, self.constructions,
-                                            reference=p2, reference_yield_tags=reference_yield_tags)
-            ordered_constructions = [c for c in self.constructions if c in maps[0] or c in maps[1]]
-            ordered_constructions += [c for c in maps[1] if c not in ordered_constructions]
-            ordered_constructions += [c for c in maps[0] if c not in ordered_constructions]
+            ordered_constructions = [c for c in self.constructions if any(c in m for m in maps)]
+            for m in maps[::-1]:
+                ordered_constructions += [c for c in m if c not in ordered_constructions]
             for construction in ordered_constructions:
-                yield_tags1 = maps[0].get(construction, {})
-                yield_tags2 = maps[1].get(construction, {})
-                self.find_mutuals(yield_tags1, yield_tags2, eval_type, mutual_tags=mutual.setdefault(construction, {}),
+                yield_cands = [m.get(construction, {}) for m in maps]
+                self.find_mutuals(*yield_cands, eval_type=eval_type, mutual_tags=mutual.setdefault(construction, {}),
                                   counter=counters.setdefault(eval_type, {}).setdefault(construction, Counter())
-                                  if self.errors else None)
+                                  if self.errors and eval_type in (LABELED, UNLABELED) else None)
 
         only = [{c: {y: tags for y, tags in d.items() if y not in mutual[c]} for c, d in m.items()} for m in maps]
         counters = counters.get(eval_type, {})
