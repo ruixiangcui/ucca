@@ -8,6 +8,7 @@ v1.2
 """
 from collections import Counter, OrderedDict
 from itertools import groupby
+
 from operator import attrgetter
 
 from ucca import layer0, layer1, normalization
@@ -88,13 +89,8 @@ class Evaluator:
         self.fscore = fscore
         self.errors = errors
 
-        self.mutual = OrderedDict()
-        self.error_counters = OrderedDict()
-
-    def find_mutuals(self, m1, m2, eval_type, construction):
-        mutual_tags = self.mutual.setdefault(construction, {})
-        counter = self.error_counters.setdefault(eval_type, {}).setdefault(construction, Counter()) if self.errors \
-            else None
+    @staticmethod
+    def find_mutuals(m1, m2, eval_type, mutual_tags, counter=None):
         for y in m1.keys() & m2.keys():
             if eval_type == UNLABELED:
                 mutual_tags[y] = ()
@@ -105,9 +101,9 @@ class Evaluator:
                 intersection = set.intersection(*tags)
                 if intersection:  # non-empty intersection
                     mutual_tags[y] = intersection
-                if self.errors:
+                if counter is not None:
                     counter[tuple("|".join(sorted(t)) for t in tags)] += 1
-        if self.errors:
+        if counter is not None:
             for y in m1.keys() - m2.keys():
                 counter[("|".join(sorted(m1[y])), "<UNMATCHED>")] += 1
             for y in m2.keys() - m1.keys():
@@ -127,8 +123,8 @@ class Evaluator:
         :param r: reference passage for fine-grained evaluation
         :returns: EvaluatorResults object if self.fscore is True, otherwise None
         """
-        self.mutual.clear()
-        self.error_counters.clear()
+        mutual = OrderedDict()
+        counters = OrderedDict()
         reference_yield_tags = None if r is None else create_passage_yields(r)[ALL_EDGES.name]
         maps = [{}, create_passage_yields(p2, self.constructions,
                                           reference_yield_tags=reference_yield_tags)]
@@ -141,19 +137,19 @@ class Evaluator:
             for construction in ordered_constructions:
                 yield_tags1 = maps[0].get(construction, {})
                 yield_tags2 = maps[1].get(construction, {})
-                self.find_mutuals(yield_tags1, yield_tags2, eval_type, construction)
+                self.find_mutuals(yield_tags1, yield_tags2, eval_type, mutual_tags=mutual.setdefault(construction, {}),
+                                  counter=counters.setdefault(eval_type, {}).setdefault(construction, Counter())
+                                  if self.errors else None)
 
-        only = [{c: {y: tags for y, tags in d.items() if y not in self.mutual[c]} for c, d in m.items()} for m in maps]
-        error_counters = self.error_counters.get(eval_type, {})
-        res = EvaluatorResults((c, SummaryStatistics(len(self.mutual[c]),
-                                                     len(only[0].get(c, ())),
-                                                     len(only[1].get(c, ())),
-                                                     error_counters.get(c))) for c in self.mutual)
+        only = [{c: {y: tags for y, tags in d.items() if y not in mutual[c]} for c, d in m.items()} for m in maps]
+        counters = counters.get(eval_type, {})
+        res = EvaluatorResults((c, SummaryStatistics(len(mutual[c]), len(only[0].get(c, ())), len(only[1].get(c, ())),
+                                                     counters.get(c))) for c in mutual)
         if self.verbose:
             print("Evaluation type: (" + eval_type + ")")
             if self.units and p1 is not None:
                 print("==> Mutual Units:")
-                print_tags_and_text(p1, self.mutual)
+                print_tags_and_text(p1, mutual)
                 print("==> Only in guessed:")
                 print_tags_and_text(p1, only[0])
                 print("==> Only in reference:")
