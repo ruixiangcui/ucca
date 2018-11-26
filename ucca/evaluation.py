@@ -121,7 +121,7 @@ class Evaluator:
         :returns: EvaluatorResults object if self.fscore is True, otherwise None
         """
         mutual = OrderedDict()
-        counters = OrderedDict()
+        counters = OrderedDict() if self.errors and eval_type == LABELED else None
         reference_yield_tags = None if r is None else create_passage_yields(r)[ALL_EDGES.name]
         maps = [{} if p is None else create_passage_yields(p, self.constructions, tags=False, reference=p2,
                                                            reference_yield_tags=reference_yield_tags) for p in (p1, p2)]
@@ -132,13 +132,11 @@ class Evaluator:
             for construction in ordered_constructions:
                 yield_cands = [m.get(construction, {}) for m in maps]
                 self.find_mutuals(*yield_cands, eval_type=eval_type, mutual_tags=mutual.setdefault(construction, {}),
-                                  counter=counters.setdefault(eval_type, {}).setdefault(construction, Counter())
-                                  if self.errors and eval_type in (LABELED, UNLABELED) else None)
+                                  counter=None if counters is None else counters.setdefault(construction, Counter()))
 
         only = [{c: {y: tags for y, tags in d.items() if y not in mutual[c]} for c, d in m.items()} for m in maps]
-        counters = counters.get(eval_type, {})
         res = EvaluatorResults((c, SummaryStatistics(len(mutual[c]), len(only[0].get(c, ())), len(only[1].get(c, ())),
-                                                     counters.get(c))) for c in mutual)
+                                                     None if counters is None else counters.get(c))) for c in mutual)
         if self.verbose:
             print("Evaluation type: (" + eval_type + ")")
             if self.units and p1 is not None:
