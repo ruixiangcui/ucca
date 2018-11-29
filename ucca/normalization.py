@@ -65,11 +65,19 @@ def replace_center(edge):
 
 
 def replace_edge_tags(node):
-    # TODO replace inter-scene N/F to L and vice versa
-    # TODO replace E in scene to D and vice versa
     for edge in node:
         if not edge.attrib.get("remote") and edge.tag == ETags.Center:
             edge.tag = replace_center(edge)
+        elif node.parallel_scenes:
+            if edge.tag == ETags.Connector:
+                edge.tag = ETags.Linker
+        elif edge.tag == ETags.Linker:
+            edge.tag = ETags.Connector
+        elif node.is_scene():
+            if edge.tag == ETags.Elaborator:
+                edge.tag = ETags.Adverbial
+        elif edge.tag == ETags.Adverbial:
+            edge.tag = ETags.Elaborator
 
 
 def move_elements(node, tags, parent_tags, forward=True):
