@@ -122,7 +122,8 @@ class Evaluator:
         """
         mutual = OrderedDict()
         counters = OrderedDict() if self.errors and eval_type == LABELED else None
-        reference_yield_tags = create_passage_yields(r or p2)[ALL_EDGES.name]
+        passage_yields = create_passage_yields(r or p2)
+        reference_yield_tags = passage_yields[ALL_EDGES.name] if passage_yields else None
         maps = [{} if p is None else create_passage_yields(p, self.constructions, tags=False, reference=p2,
                                                            reference_yield_tags=reference_yield_tags) for p in (p1, p2)]
         if p1 is not None:
