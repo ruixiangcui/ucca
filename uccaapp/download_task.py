@@ -22,7 +22,14 @@ class TaskDownloader(ServerAccessor):
 
     def download_task(self, task_id, write=True, binary=None, out_dir=None, prefix=None, **kwargs):
         del kwargs
-        passage = from_json(self.get_user_task(task_id), all_categories=self.layer["categories"])
+        all_categories = []
+        layer = self.layer
+        while layer:
+            all_categories.append(layer["categories"])
+            if layer["slotted"]:
+                all_categories.append(layer["categories"])
+            layer = layer["parent"]
+        passage = from_json(self.get_user_task(task_id), all_categories=all_categories)
         if write:
             write_passage(passage, binary=binary, outdir=out_dir, prefix=prefix)
         return passage

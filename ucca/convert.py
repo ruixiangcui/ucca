@@ -23,7 +23,7 @@ import xml.etree.ElementTree as ET
 import xml.sax.saxutils
 from operator import attrgetter, itemgetter
 
-from ucca import textutil, core, layer0, layer1
+from ucca import textutil, core, layer0, layer1, refinement_layer
 from ucca.layer1 import EdgeTags
 from ucca.normalization import attach_punct
 
@@ -828,9 +828,11 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
         for token in sorted(d["tokens"], key=itemgetter("index_in_task"))}
     # Create non-terminals
     l1 = layer1.Layer1(passage)
+    l2 = refinement_layer.RefinementLayer(passage)
     tree_id_to_node = {}
     token_id_to_preterminal = {}
-    category_id_to_name = {c["id"]: c["name"] for c in all_categories} if all_categories else None
+    category_id_to_name = {i+1: {c["id"]: c["name"] for c in categories} for i, categories
+                           in enumerate(all_categories)} if all_categories else None
     # Assuming topological sort: parents always appear before children
     for unit in sorted(d["annotation_units"], key=itemgetter("is_remote_copy")):  # Get non-remotes first
         tree_id = unit["tree_id"]
@@ -853,7 +855,7 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
         category_name_to_edge_tag = {} if skip_category_mapping else EdgeTags.__dict__
         for category in unit["categories"]:
             try:
-                category_name = category.get("name") or category_id_to_name[category["id"]]
+                category_name = category.get("name") or category_id_to_name[int(category["slot"])][category["id"]]
             except TypeError:
                 raise ValueError("Missing category name, and no category list available")
             except KeyError:
