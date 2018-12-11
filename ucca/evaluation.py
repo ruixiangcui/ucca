@@ -38,6 +38,8 @@ def get_yield(unit):
 def move_functions(p1, p2):
     """
     Move any common Fs to the root
+    FIXME make sure not to create duplicate edges due to Functions that are already under the root
+    FIXME also make sure to preserve remote edges
     """
     f1, f2 = [{get_yield(u): u for u in p.layer(layer1.LAYER_ID).all
                if u.tag == NodeTags.Foundational and u.ftag == EdgeTags.Function} for p in (p1, p2)]
@@ -341,7 +343,7 @@ def evaluate(guessed, ref, converter=None, verbose=False, constructions=DEFAULT,
     if converter is not None:
         guessed = converter(guessed)
         ref = converter(ref)
-    if normalize:
+    if normalize:  # FIXME clone passages to avoid modifying the original ones
         for passage in (guessed, ref):
             normalization.normalize(passage)  # flatten Cs inside Cs
         move_functions(guessed, ref)  # move common Fs to be under the root
