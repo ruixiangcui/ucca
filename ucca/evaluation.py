@@ -1,10 +1,11 @@
 """
 The evaluation library for UCCA layer 1.
-v1.2
+v1.3
 2016-12-25: move common Fs to root before evaluation
 2017-01-04: flatten centers, do not add 1 (for root) to mutual
 2017-01-16: fix bug in moving common Fs
 2018-04-12: exclude punctuation nodes regardless of edge tag
+2018-12-11: fix another bug in moving common Fs
 """
 from collections import Counter, OrderedDict
 from itertools import groupby
@@ -38,17 +39,13 @@ def get_yield(unit):
 def move_functions(p1, p2):
     """
     Move any common Fs to the root
-    FIXME make sure not to create duplicate edges due to Functions that are already under the root
-    FIXME also make sure to preserve remote edges
     """
     f1, f2 = [{get_yield(u): u for u in p.layer(layer1.LAYER_ID).all
                if u.tag == NodeTags.Foundational and u.ftag == EdgeTags.Function} for p in (p1, p2)]
-    for positions in f1.keys() & f2.keys():
+    for positions in f1.keys() & f2.keys():  # positions is a yield corresponding to a Function in both passages
         for (p, unit) in ((p1, f1[positions]), (p2, f2[positions])):
-            for parent in unit.parents:
-                tag = unit.ftag
-                parent.remove(unit)
-                p.layer(layer1.LAYER_ID).heads[0].add(tag, unit)
+            unit.fparent.remove(unit)  # Remove from current primary parent (but preserve remote parents)
+            p.layer(layer1.LAYER_ID).heads[0].add(EdgeTags.Function, unit)  # Add to root
 
 
 def get_text(p, positions):
