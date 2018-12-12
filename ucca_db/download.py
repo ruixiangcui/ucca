@@ -31,6 +31,8 @@ def main(args):
                 with external_write_mode():
                     print("Getting passage " + passage_id + " with " + args.method + "=" + id_field, end="\t")
             xml_root = get_by_method(id_field=id_field.split(","), passage_id=passage_id, **vars(args))
+            if xml_root is None:
+                continue
             if args.write_site:
                 site_filename = passage_id + "_site_download.xml"
                 with open(site_filename, "w", encoding="utf-8") as fsite:
@@ -52,5 +54,6 @@ if __name__ == "__main__":
     argparser.add_argument("-s", "--write-site", action="store_true", help="write site format, too, for debugging")
     argparser.add_argument("-n", "--no-write", dest="write", action="store_false", help="do not really write any files")
     argparser.add_argument("-x", "--write-xids", help="file to write xids to (for `uid' method)")
+    argparser.add_argument("-S", "--strict", action="store_true", help="fail if no result is found")
     argparser.add_argument("-v", "--verbose", action="store_true", help="print tagged text for each passage")
     main(argparser.parse_args())
