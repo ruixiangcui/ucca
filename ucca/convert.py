@@ -800,6 +800,7 @@ def to_sequence(passage):
 
 
 UNANALYZABLE = "Unanalyzable"
+UNCERTAIN = "Uncertain"
 IGNORED_CATEGORIES = {UNANALYZABLE}
 
 
@@ -933,7 +934,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
             assert implicit or ts, "Only implicit units may not have a children_tokens field: " + n.ID
             return dict(tree_id="-".join(map(str, elements)),
                         type="IMPLICIT" if implicit else "REGULAR", is_remote_copy=is_remote_copy,
-                        categories=cs, comment=n.ID, cluster="", cloned_from_tree_id=None,
+                        categories=cs, comment=n.extra.get("remarks", ""), cluster="", cloned_from_tree_id=None,
                         parent_tree_id=parent_tree_id, gui_status="OPEN",
                         children_tokens=[dict(id=terminal_id_to_token_id[t.ID]) for t in ts])
 
@@ -967,13 +968,16 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
             node = edge.child
             remote = edge.attrib.get("remote", False)
             parent_annotation_unit = node_id_to_primary_annotation_unit[edge.parent.ID]
-            tags = [e.tag for e in edges] + \
-                list(filter(None, (_extra_tag(e) for e in edges if not e.attrib.get("remote"))))
+            tags = [e.tag for e in edges]
+            # This can be used for additional tags written in the remarks -- no agreed format but some workaround:
+            # list(filter(None, (_extra_tag(e) for e in edges if not e.attrib.get("remote"))))
             categories = [dict(name=edge_tag_to_category_name.get(t, t), slot=1) for t in tags]
             terminals = node.get_terminals()
             outgoing = _outgoing(tree_id_elements, node)
             if not outgoing and len(terminals) > 1:
-                categories.insert(0, dict(name=UNANALYZABLE))
+                categories.insert(0, dict(name=UNANALYZABLE, slot=1))
+            if node.attrib.get("uncertain"):
+                categories.append(dict(name=UNCERTAIN, slot=1))
             if all_categories:
                 for category in categories:
                     try:
