@@ -16,8 +16,9 @@ class StreusselPassageUploader(ServerAccessor):
         self.set_project(project_id)
         self.set_user(user_id)
 
-    def upload_streussel_passage_file(self, filenames, **kwargs):
+    def upload_streussel_passage_file(self, filenames, report=None, **kwargs):
         del kwargs
+        report_h = open(report, "w", encoding="utf-8") if report else None
         with open(filenames) as f_all:
             for filename in f_all:
                 passage_text = ""
@@ -48,11 +49,16 @@ class StreusselPassageUploader(ServerAccessor):
                 tok_user_task_in.update(to_json(passage, return_dict=True, tok_task=True))
 
                 self.submit_tokenization_task(**tok_user_task_in)
-                print("Uploaded Passage " + filename + " successful.", file=sys.stderr)
+                print("Uploaded passage " + filename + " successfully.", file=sys.stderr)
+                if report:
+                    print(filename.split(".")[-2], passage_out["id"], tok_task_out["id"], file=report_h, sep="\t")
+        if report:
+            report_h.close()
 
     @staticmethod
     def add_arguments(argparser):
         argparser.add_argument("filenames", help="passage file names to convert and upload")
+        argparser.add_argument("-r", "--report", help="filename to write report of uploaded passages to")
         ServerAccessor.add_project_id_argument(argparser)
         ServerAccessor.add_source_id_argument(argparser)
         ServerAccessor.add_user_id_argument(argparser)
