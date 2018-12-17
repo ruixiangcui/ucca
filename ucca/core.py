@@ -187,13 +187,64 @@ class _AttributeDict:
         return self._dict.items()
 
 
+class Category:
+    """when considering refinement layers, each edge can have multiple tags sorted in a certain hierarchy.
+    for this reason, a category must include not only the tag information but also the layer and hierarchy
+    information.
+    """
+
+    def __init__(self, root, tag, slot, layer, parent=None, attrib=None):
+        if root.frozen:
+            raise FrozenPassageError(root.ID)
+        self._root = root
+        self._tag = tag
+        self._slot = slot
+        self._layer = layer
+        self._parent = parent
+        self._attrib = _AttributeDict(root, attrib)
+        self.extra = {}
+
+    @property
+    def root(self):
+        return self._root
+
+    @property
+    def attrib(self):
+        return self._attrib
+
+    @property
+    def tag(self):
+        return self._tag
+
+    @property
+    def slot(self):
+        return self._slot
+
+    @property
+    def layer(self):
+        return self._layer
+
+    @property
+    def parent(self):
+        return self._parent
+
+    @parent.setter
+    def parent(self, new_parent):
+        self._parent = new_parent
+
+    def to_xml(self):
+        pass
+
+
+
 class Edge:
     """Labeled edge between two :class:`Node` objects in UCCA annotation graph.
 
     An edge between Nodes in a :class:`Passage` is a simple object; it is a
     directed edge whose ID is derived by the parent and child of the edge,
     it is mostly immutable except for its attributes, and it is labeled with
-    the connection type between the Nodes.
+    the connection type between the Nodes. an edge can have multiple annotations, representing
+    connection types of one or more layers.
 
     Attributes:
         ID: ID of the Edge, constructed from the IDs of the two Nodes
@@ -203,6 +254,7 @@ class Edge:
         tag: the string label of the Edge
         parent: the originating Node of the Edge
         child: the target Node of the Edge
+        categories: a list of categories for this edge
         ID_FORMAT: format string which creates the ID of the Edge from
             the IDs of the parent (first argument to the formattinf string)
             and the child (second argument).
@@ -211,7 +263,7 @@ class Edge:
 
     ID_FORMAT = "{}->{}"
 
-    def __init__(self, root, tag, parent, child, attrib=None):
+    def __init__(self, root, parent, child, attrib=None):
         """Creates a new :class:`Edge` object.
 
         :param see :class:`Edge` documentation.
@@ -222,16 +274,16 @@ class Edge:
         """
         if root.frozen:
             raise FrozenPassageError(root.ID)
-        self._tag = tag
         self._root = root
         self._parent = parent
         self._child = child
         self._attrib = _AttributeDict(root, attrib)
+        self._categories = []
         self.extra = {}
 
     @property
     def tag(self):
-        return self._tag
+        return self._categories[0].tag
 
     @tag.setter
     @ModifyPassage
@@ -286,8 +338,29 @@ class Edge:
                                   ordered=ordered,
                                   ignore_node=ignore_node, ignore_edge=ignore_edge))
 
+    @ModifyPassage
+    def add(self, category):
+        """ adds a new category to the edge"""
+        c = Category(self.root, category[0], category[1], category[2], category[3])
+        self._categories.append(c)
+        return c
+
     def __repr__(self):
         return self.ID
+
+
+    def iter(self):
+        """Iterates the :class:`Edge` objects in the subtree of self.
+
+        :param obj: yield Category objects
+
+        Yields:
+            a :class:`Node` or :class:`Edge` object according to the iteration
+            parameters.
+
+        """
+        for category in self._categories:
+            yield category
 
 
 class Node:
@@ -400,10 +473,10 @@ class Node:
         return Node.__name__ + "(" + self.ID + ")"
 
     @ModifyPassage
-    def add(self, edge_tag, node, *, edge_attrib=None):
+    def add(self, edge_categories, node, *, edge_attrib=None):
         """Adds another :class:`Node` object as a child of self.
 
-        :param edge_tag: the label of the :class:`Edge` connecting between the
+        :param edge_categories: the labels of the :class:`Edge` connecting between the
                 Nodes
             node: the Node object which we want to have an Edge to
             edge_attrib: Keyword only, dictionary of attributes to be passed
@@ -415,8 +488,10 @@ class Node:
                 is frozen and can't be modified.
 
         """
-        edge = Edge(root=self._root, tag=edge_tag, parent=self,
+        edge = Edge(root=self._root, parent=self,
                     child=node, attrib=edge_attrib)
+        for category in edge_categories:
+            edge.add(category)
         self._outgoing.append(edge)
         self._outgoing.sort(key=self._orderkey)
         node._incoming.append(edge)

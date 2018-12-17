@@ -25,9 +25,9 @@ class TaskDownloader(ServerAccessor):
         all_categories = []
         layer = self.layer
         while layer:
-            all_categories.append(layer["categories"])
+            all_categories.append({"layer_name":layer["name"], "categories":layer["categories"]})
             if layer["slotted"]:
-                all_categories.append(layer["categories"])
+                all_categories.append({"layer_name":layer["name"], "categories":layer["categories"]})
             layer = layer["parent"]
         passage = from_json(self.get_user_task(task_id), all_categories=all_categories)
         if write:

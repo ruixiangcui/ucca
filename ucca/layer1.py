@@ -431,12 +431,12 @@ class Layer1(core.Layer):
             except KeyError:
                 return id_str
 
-    def add_fnode(self, parent, edge_tag, *, implicit=False):
+    def add_fnode(self, parent, edge_categories, *, implicit=False):
         """Adds a new :class:`FNode` whose parent and Edge tag are given.
 
         :param parent: the FNode which will be the parent of the new FNode.
                 If the parent is None, adds under the layer head FNode.
-        :param edge_tag: the tag on the Edge between the parent and the new FNode.
+        :param edge_categories: list of categories on the Edge between the parent and the new FNode.
         :param implicit: whether to set the new FNode as implicit (default False)
 
         :return: the newly created FNode
@@ -448,19 +448,20 @@ class Layer1(core.Layer):
         node_attrib = {'implicit': True} if implicit else {}
         fnode = FoundationalNode(root=self.root, tag=NodeTags.Foundational,
                                  ID=self.next_id(), attrib=node_attrib)
-        parent.add(edge_tag, fnode)
+        if edge_categories:
+            parent.add(edge_categories, fnode)
         return fnode
 
-    def add_remote(self, parent, edge_tag, child):
+    def add_remote(self, parent, edge_categories, child):
         """Adds a new :class:`core`.Edge with remote attribute between the nodes.
 
         :param parent: the parent of the remote Edge
-        :param edge_tag: tag of the Edge
+        :param edge_categories: list of categories of the Edge
         :param child: the child of the remote Edge
 
         :raise core.FrozenPassageError if the Passage is frozen
         """
-        parent.add(edge_tag, child, edge_attrib={'remote': True})
+        parent.add(edge_categories, child, edge_attrib={'remote': True})
 
     def add_punct(self, parent, terminal):
         """Adds a PunctNode as the child of parent and the Terminal under it.
@@ -478,8 +479,8 @@ class Layer1(core.Layer):
             parent = self._head_fnode
         punct_node = PunctNode(root=self.root, tag=NodeTags.Punctuation,
                                ID=self.next_id())
-        parent.add(EdgeTags.Punctuation, punct_node)
-        punct_node.add(EdgeTags.Terminal, terminal)
+        parent.add([core.Category(EdgeTags.Punctuation, 1, "tokenization", "")], punct_node)
+        punct_node.add([core.Category(EdgeTags.Terminal, 1, "tokenization", "")], terminal)
         return punct_node
 
     def add_linkage(self, relation, *args):
@@ -497,9 +498,9 @@ class Layer1(core.Layer):
         """
         linkage = Linkage(root=self.root, tag=NodeTags.Linkage,
                           ID=self.next_id())
-        linkage.add(EdgeTags.LinkRelation, relation)
+        linkage.add([core.Category(EdgeTags.LinkRelation, 1, "tokenization", "")], relation)
         for arg in args:
-            linkage.add(EdgeTags.LinkArgument, arg)
+            linkage.add([core.Category(EdgeTags.LinkArgument, 1, "tokenization", "")], arg)
         return linkage
 
     def _check_top_scene(self, node):

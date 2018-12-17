@@ -615,6 +615,12 @@ def to_standard(passage):
                                           toID=edge.child.ID, type=edge.tag)
                 _add_attrib(edge, edge_elem)
                 _add_extra(edge, edge_elem)
+                for category in edge.iter():
+                    category_elem = ET.SubElement(edge_elem, "category", tag=category.tag,
+                                                  layer_name=category.layer, slot=str(category.slot),
+                                                  parent_name="" if not category.parent else category.parent)
+                    _add_attrib(category, category_elem)
+                    _add_extra(category, category_elem)
     return root
 
 
@@ -828,11 +834,14 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
         for token in sorted(d["tokens"], key=itemgetter("index_in_task"))}
     # Create non-terminals
     l1 = layer1.Layer1(passage)
-    l2 = refinement_layer.RefinementLayer(passage)
     tree_id_to_node = {}
     token_id_to_preterminal = {}
-    category_id_to_name = {i+1: {c["id"]: c["name"] for c in categories} for i, categories
+    slot_to_layer = {i+1: categories["layer_name"] for i, categories in enumerate(all_categories)} if all_categories else None
+    category_id_to_name = {i+1: {c["id"]: c["name"] for c in categories["categories"]} for i, categories
                            in enumerate(all_categories)} if all_categories else None
+    category_id_to_parent = {i + 1: {c["id"]: c["parent"] if "parent" in c.keys() else None
+                                     for c in categories["categories"] }
+                             for i, categories in enumerate(all_categories)} if all_categories else None
     # Assuming topological sort: parents always appear before children
     for unit in sorted(d["annotation_units"], key=itemgetter("is_remote_copy")):  # Get non-remotes first
         tree_id = unit["tree_id"]
@@ -847,44 +856,52 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
         parent_tree_id = unit["parent_tree_id"]
         if parent_tree_id is None:  # Root node: no need to create
             tree_id_to_node[tree_id] = None
-            continue
+            parent_node = None
+#            continue
         try:
             parent_node = tree_id_to_node[parent_tree_id]
         except KeyError:
-            raise ValueError("Unit %s appears before its parent, %s" % (tree_id, parent_tree_id))
+            #raise ValueError("Unit %s appears before its parent, %s" % (tree_id, parent_tree_id))
+            pass
         category_name_to_edge_tag = {} if skip_category_mapping else EdgeTags.__dict__
+        categories = []
         for category in unit["categories"]:
             try:
                 category_name = category.get("name") or category_id_to_name[int(category["slot"])][category["id"]]
+                category_parent = category_id_to_parent[int(category["slot"])][category["id"]]
+                category_parent_name = category_parent["name"] if category_parent else None
             except TypeError:
                 raise ValueError("Missing category name, and no category list available")
             except KeyError:
                 raise ValueError("Category missing from layer: " + category["id"])
             if category_name in IGNORED_CATEGORIES:
                 continue
+            slot = category["slot"]
+            layer = slot_to_layer[int(slot)]
             tag = category_name_to_edge_tag.get(category_name.replace(" ", ""), category_name)
-            children_tokens = unit["children_tokens"]
+            categories.append((tag, slot, layer, category_parent_name))
+        children_tokens = unit["children_tokens"]
+        try:
+            terminal = token_id_to_terminal[children_tokens[0]["id"]] if len(children_tokens) == 1 else None
+        except (IndexError, KeyError):
+            terminal = None
+        if remote:
             try:
-                terminal = token_id_to_terminal[children_tokens[0]["id"]] if len(children_tokens) == 1 else None
-            except (IndexError, KeyError):
-                terminal = None
-            if remote:
-                try:
-                    node = tree_id_to_node[cloned_from_tree_id]
-                except KeyError:
-                    raise ValueError("Remote copy %s refers to nonexistent unit: %s" % (tree_id, cloned_from_tree_id))
-                l1.add_remote(parent_node, tag, node)
-            elif not skip_category_mapping and terminal and layer0.is_punct(terminal):
-                tree_id_to_node[tree_id] = l1.add_punct(None, terminal)
-            else:
-                node = tree_id_to_node[tree_id] = l1.add_fnode(parent_node, tag, implicit=(unit["type"] == "IMPLICIT"))
-                for token in children_tokens:
-                    token_id_to_preterminal[token["id"]] = node
+                node = tree_id_to_node[cloned_from_tree_id]
+            except KeyError:
+                raise ValueError("Remote copy %s refers to nonexistent unit: %s" % (tree_id, cloned_from_tree_id))
+            l1.add_remote(parent_node, categories, node)
+        elif not skip_category_mapping and terminal and layer0.is_punct(terminal):
+            tree_id_to_node[tree_id] = l1.add_punct(None, terminal)
+        else:
+            node = tree_id_to_node[tree_id] = l1.add_fnode(parent_node, categories, implicit=(unit["type"] == "IMPLICIT"))
+            for token in children_tokens:
+                token_id_to_preterminal[token["id"]] = node
     # Attach terminals to non-terminals
     for token_id, node in token_id_to_preterminal.items():
         terminal = token_id_to_terminal[token_id]
         if skip_category_mapping or not layer0.is_punct(terminal):
-            node.add(EdgeTags.Terminal, terminal)
+            node.add([(EdgeTags.Terminal, 1, "tokenization", "")], terminal)
     return passage
 
 
