@@ -102,7 +102,7 @@ class Linkage(core.Node):
 
     A Linkage object represents a connection between two parallel scenes.
     The semantic type of the link is not determined in this object, but the
-    :class:FoundationalNode of linkage is referred as the link relation,
+    :class:`FoundationalNode` of linkage is referred as the link relation,
     and the linked scenes are referred to as the arguments.
 
     Most cases will have two arguments, but some constructions have 1 or 3+
@@ -269,13 +269,14 @@ class FoundationalNode(core.Node):
         :param punct: whether to include punctuation Terminals, defaults to True
         :param remotes: whether to include Terminals from remote FoundationalNodes, defaults to false
         :param visited: used to detect cycles
-        :return a list of :class:layer0.Terminal objects
+        :return: a list of :class:`layer0`.Terminal objects
         """
         if visited is None:
-            visited = set()
-        return sorted([t for e in set(self) - visited if remotes or not e.attrib.get("remote")
-                       for t in e.child.get_terminals(punct, remotes, visited | set(self))],
-                      key=operator.attrgetter("position"))
+            return sorted(self.get_terminals(punct=punct, remotes=remotes, visited=set()),
+                          key=operator.attrgetter("position"))
+        outgoing = {e for e in set(self) - visited if remotes or not e.attrib.get("remote")}
+        return [t for e in outgoing for t in e.child.get_terminals(
+            punct=punct, remotes=remotes, visited=visited | outgoing)]
 
     @property
     def start_position(self):
@@ -359,10 +360,10 @@ class FoundationalNode(core.Node):
 
 
 class PunctNode(FoundationalNode):
-    """Encapsulates punctuation :class:layer0.Terminal objects.
+    """Encapsulates punctuation :class:`layer0`.Terminal objects.
 
     Attributes:
-        terminals: return the :class:layer0.Terminal objects encapsulated
+        terminals: return the :class:`layer0`.Terminal objects encapsulated
             by this Node in a list (at least one, usually not more than 1).
         start_position:
         end_position:
@@ -388,7 +389,7 @@ class PunctNode(FoundationalNode):
 
         :param punct: whether to include punctuation Terminals, defaults to True
 
-        :return a list of :class:layer0.Terminal objects
+        :return: a list of :class:`layer0`.Terminal objects
 
         """
         return self.children if punct else ()
@@ -431,14 +432,14 @@ class Layer1(core.Layer):
                 return id_str
 
     def add_fnode(self, parent, edge_tag, *, implicit=False):
-        """Adds a new :class:FNode whose parent and Edge tag are given.
+        """Adds a new :class:`FNode` whose parent and Edge tag are given.
 
         :param parent: the FNode which will be the parent of the new FNode.
                 If the parent is None, adds under the layer head FNode.
         :param edge_tag: the tag on the Edge between the parent and the new FNode.
         :param implicit: whether to set the new FNode as implicit (default False)
 
-        :return the newly created FNode
+        :return: the newly created FNode
 
         :raise core.FrozenPassageError if the Passage is frozen
         """
@@ -451,7 +452,7 @@ class Layer1(core.Layer):
         return fnode
 
     def add_remote(self, parent, edge_tag, child):
-        """Adds a new :class:core.Edge with remote attribute between the nodes.
+        """Adds a new :class:`core`.Edge with remote attribute between the nodes.
 
         :param parent: the parent of the remote Edge
         :param edge_tag: tag of the Edge
@@ -468,7 +469,7 @@ class Layer1(core.Layer):
                 under rhe layer head FNode.
         :param terminal: the punctuation Terminal we want to put under parent.
 
-        :return the newly create PunctNode.
+        :return: the newly create PunctNode.
 
         :raise core.FrozenPassageError if the Passage is frozen.
 
@@ -489,7 +490,7 @@ class Layer1(core.Layer):
         :param relation: the link relation FNode.
         :param args: any number (at least 1) of linkage arguments FNodes.
 
-        :return the newly created Linkage
+        :return: the newly created Linkage
 
         :raise core.FrozenPassageError if the Passage is frozen.
 
@@ -508,7 +509,7 @@ class Layer1(core.Layer):
 
         :param node: the FNode to check.
 
-        :return True iff node is a top-level scenes.
+        :return: True iff node is a top-level scenes.
 
         """
         if not node.is_scene():

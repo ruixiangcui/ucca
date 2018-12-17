@@ -11,6 +11,11 @@ desc = """Download task from UCCA-App and convert to a passage in standard forma
 
 
 class TaskDownloader(ServerAccessor):
+    def __init__(self, source_id, project_id, **kwargs):
+        super().__init__(**kwargs)
+        self.set_source(source_id)
+        self.set_project(project_id)
+
     def download_tasks(self, task_ids, **kwargs):
         for task_id in task_ids:
             yield self.download_task(task_id, **kwargs)
@@ -25,6 +30,8 @@ class TaskDownloader(ServerAccessor):
     @staticmethod
     def add_arguments(argparser):
         argparser.add_argument("task_ids", nargs="+", type=int, help="IDs of tasks to download and convert")
+        ServerAccessor.add_project_id_argument(argparser)
+        ServerAccessor.add_source_id_argument(argparser)
         TaskDownloader.add_write_arguments(argparser)
         ServerAccessor.add_arguments(argparser)
 

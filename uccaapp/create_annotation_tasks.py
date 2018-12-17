@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import argparse
 import sys
+
+import argparse
 
 from uccaapp.api import ServerAccessor
 
@@ -8,11 +9,10 @@ desc = """Convert a passage file to JSON format and upload to UCCA-App as a comp
 
 
 class AnnotationTaskCreator(ServerAccessor):
-    def __init__(self, user_id, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.set_user(user_id)
 
-    def create_task(self, filename, **kwargs):
+    def create_annotation_task(self, filename, review=False, manager_comment=None, **kwargs):
         del kwargs
         with open(filename) as f:
             num = 0
@@ -23,25 +23,31 @@ class AnnotationTaskCreator(ServerAccessor):
                     continue
                 user_id = fields[0]
                 user_model = self.get_user(user_id)
-                tok_task_out = self.get_task(fields[1])
-                task_in = dict(type="ANNOTATION", status="NOT_STARTED",
-                               project=self.project, user=user_model,
-                               passage=tok_task_out["passage"], manager_comment="Reviews corpus",
-                               user_comment="Test", parent=tok_task_out,
+                task_id = fields[1]
+                task_out = self.get_task(task_id)
+                assert task_out["type"] in (["ANNOTATION", "REVIEW"] if review else ["TOKENIZATION"]), \
+                    "Wrong input task given: %s for task ID %s" % (task_out["type"], task_id)
+                task_in = dict(type="REVIEW" if review else "ANNOTATION", status="NOT_STARTED",
+                               project=task_out["project"], user=user_model,
+                               passage=task_out["passage"], manager_comment=manager_comment or "",
+                               user_comment="", parent=task_out,
                                is_demo=False, is_active=True)
-                self.create_annotation_task(**task_in)
+                self.create_task(**task_in)
                 num += 1
             print("Uploaded %d tasks successfully." % num, file=sys.stderr)
 
     @staticmethod
     def add_arguments(argparser):
-        argparser.add_argument("filename", help="a file where each line is a <User ID> <TOKENIZATION TASK ID>")
-        ServerAccessor.add_user_id_argument(argparser)
+        argparser.add_argument("filename", help="a file where each line is a <User ID> <INPUT TASK ID>, "
+                                                "where the input task may be an annotation/review task "
+                                                "(if given --review) or a tokenization task")
         ServerAccessor.add_arguments(argparser)
+        argparser.add_argument("-r", "--review", action="store_true", help="Create annotation/review task")
+        argparser.add_argument("--manager-comment", action="store_true", help="Manager comment to set for all tasks")
 
 
 def main(**kwargs):
-    AnnotationTaskCreator(**kwargs).create_task(**kwargs)
+    AnnotationTaskCreator(**kwargs).create_annotation_task(**kwargs)
 
 
 if __name__ == "__main__":

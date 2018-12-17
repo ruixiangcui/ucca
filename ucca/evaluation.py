@@ -1,12 +1,14 @@
 """
 The evaluation library for UCCA layer 1.
-v1.2
+v1.3
 2016-12-25: move common Fs to root before evaluation
 2017-01-04: flatten centers, do not add 1 (for root) to mutual
 2017-01-16: fix bug in moving common Fs
 2018-04-12: exclude punctuation nodes regardless of edge tag
+2018-12-11: fix another bug in moving common Fs
 """
 from collections import Counter, OrderedDict
+from itertools import groupby
 
 from operator import attrgetter
 
@@ -40,12 +42,10 @@ def move_functions(p1, p2):
     """
     f1, f2 = [{get_yield(u): u for u in p.layer(layer1.LAYER_ID).all
                if u.tag == NodeTags.Foundational and u.ftag == EdgeTags.Function} for p in (p1, p2)]
-    for positions in f1.keys() & f2.keys():
+    for positions in f1.keys() & f2.keys():  # positions is a yield corresponding to a Function in both passages
         for (p, unit) in ((p1, f1[positions]), (p2, f2[positions])):
-            for parent in unit.parents:
-                tag = unit.ftag
-                parent.remove(unit)
-                p.layer(layer1.LAYER_ID).heads[0].add(tag, unit)
+            unit.fparent.remove(unit)  # Remove from current primary parent (but preserve remote parents)
+            p.layer(layer1.LAYER_ID).heads[0].add(EdgeTags.Function, unit)  # Add to root
 
 
 def get_text(p, positions):
@@ -54,9 +54,14 @@ def get_text(p, positions):
 
 
 def print_tags_and_text(p, yield_tags):
-    for y, tags in sorted(yield_tags.items(), key=lambda x: min(x[0] or [0])):
-        text = " ".join(get_text(p, y))
-        print((",".join(sorted(filter(None, tags))) + ": " + text) if tags else text)
+    text_to_tags = {}
+    for construction, construction_yield_tags in yield_tags.items():
+        for y, tags in construction_yield_tags.items():
+            if construction.criterion is None:  # category from reference yield tags
+                tags = list(tags) + [construction.name]
+            text_to_tags.setdefault((min(y or [-1]), -max(y or [-1]), " ".join(get_text(p, y))), []).extend(tags)
+    for (_, _, text), tags in sorted(text_to_tags.items()):
+        print((",".join(sorted(set(filter(None, tags)))) + ": " + text) if tags else text)
 
 
 def expand_equivalents(tag_set):
@@ -83,24 +88,22 @@ class Evaluator:
         self.fscore = fscore
         self.errors = errors
 
-        self.mutual = OrderedDict()
-        self.error_counters = OrderedDict()
-
-    def find_mutuals(self, m1, m2, eval_type, construction):
-        mutual_tags = self.mutual.setdefault(construction, {})
+    @staticmethod
+    def find_mutuals(m1, m2, eval_type, mutual_tags, counter=None):
         for y in m1.keys() & m2.keys():
             if eval_type == UNLABELED:
                 mutual_tags[y] = ()
             else:
-                tags = [set(m1[y]), set(m2[y])]
+                tags = [set(c.edge.tag for c in m[y]) for m in (m1, m2)]
                 if eval_type == WEAK_LABELED:
                     tags[0] = expand_equivalents(tags[0])
                 intersection = set.intersection(*tags)
                 if intersection:  # non-empty intersection
                     mutual_tags[y] = intersection
-                elif self.errors:
-                    self.error_counters.setdefault(eval_type, {}).setdefault(construction, Counter())[
-                        tuple("|".join(sorted(t)) for t in tags)] += 1
+        if counter is not None:
+            for y in m1.keys() | m2.keys():
+                tags = [sorted(set(c.edge.tag for c in m.get(y, ()) if not c.is_unary_child)) for m in (m1, m2)]
+                counter[tuple("|".join(t) or "<UNMATCHED>" for t in tags)] += 1
 
     def get_scores(self, p1, p2, eval_type, r=None):
         """
@@ -114,48 +117,37 @@ class Evaluator:
         3. WEAK_LABELED: also requires weak tag match (if there are multiple units with the same yield,
                          requires one match)
         :param r: reference passage for fine-grained evaluation
-        :returns EvaluatorResults object if self.fscore is True, otherwise None
+        :returns: EvaluatorResults object if self.fscore is True, otherwise None
         """
-        self.mutual.clear()
-        self.error_counters.clear()
-        reference_yield_tags = None if r is None else create_passage_yields(r, punct=True)[ALL_EDGES.name]
-        maps = [{}, create_passage_yields(p2, self.constructions,
-                                          reference_yield_tags=reference_yield_tags)]
+        mutual = OrderedDict()
+        counters = OrderedDict() if self.errors and eval_type == LABELED else None
+        passage_yields = create_passage_yields(r or p2)
+        reference_yield_tags = passage_yields[ALL_EDGES.name] if passage_yields else None
+        maps = [{} if p is None else create_passage_yields(p, self.constructions, tags=False, reference=p2,
+                                                           reference_yield_tags=reference_yield_tags) for p in (p1, p2)]
         if p1 is not None:
-            maps[0] = create_passage_yields(p1, self.constructions,
-                                            reference=p2, reference_yield_tags=reference_yield_tags)
-            ordered_constructions = [c for c in self.constructions if c in maps[0] or c in maps[1]]
-            ordered_constructions += [c for c in maps[1] if c not in ordered_constructions]
-            ordered_constructions += [c for c in maps[0] if c not in ordered_constructions]
+            ordered_constructions = [c for c in self.constructions if any(c in m for m in maps)]
+            for m in maps[::-1]:
+                ordered_constructions += [c for c in m if c not in ordered_constructions]
             for construction in ordered_constructions:
-                yield_tags1 = maps[0].get(construction, {})
-                yield_tags2 = maps[1].get(construction, {})
-                self.find_mutuals(yield_tags1, yield_tags2, eval_type, construction)
+                yield_cands = [m.get(construction, {}) for m in maps]
+                self.find_mutuals(*yield_cands, eval_type=eval_type, mutual_tags=mutual.setdefault(construction, {}),
+                                  counter=None if counters is None else counters.setdefault(construction, Counter()))
 
+        only = [{c: {y: tags for y, tags in d.items() if y not in mutual[c]} for c, d in m.items()} for m in maps]
+        res = EvaluatorResults((c, SummaryStatistics(len(mutual[c]), len(only[0].get(c, ())), len(only[1].get(c, ())),
+                                                     None if counters is None else counters.get(c))) for c in mutual)
         if self.verbose:
             print("Evaluation type: (" + eval_type + ")")
-
-        only = [{c: {y: tags for y, tags in d.items() if y not in self.mutual[c]} for c, d in m.items()} for m in maps]
-        if self.verbose and self.units and p1 is not None:
-            print("==> Mutual Units:")
-            print_tags_and_text(p1, self.mutual[PRIMARY])
-            print("==> Only in guessed:")
-            print_tags_and_text(p1, only[0][PRIMARY])
-            print("==> Only in reference:")
-            print_tags_and_text(p2, only[1][PRIMARY])
-
-        error_counters = self.error_counters.get(eval_type, {})
-        res = EvaluatorResults((c, SummaryStatistics(len(self.mutual[c]),
-                                                     len(only[0].get(c, ())),
-                                                     len(only[1].get(c, ())),
-                                                     error_counters.get(c)))
-                               for c in self.mutual)
-        if self.verbose:
+            if self.units and p1 is not None:
+                print("==> Mutual Units:")
+                print_tags_and_text(p1, mutual)
+                print("==> Only in guessed:")
+                print_tags_and_text(p1, only[0])
+                print("==> Only in reference:")
+                print_tags_and_text(p2, only[1])
             if self.fscore:
                 res.print()
-            if self.errors and error_counters:
-                res.print_confusion_matrix()
-
         return res
 
 
@@ -194,30 +186,32 @@ class Scores:
                       name=names[0] if len(names) == 1 else None,
                       evaluation_format=formats[0] if len(formats) == 1 else None)
 
-    def print(self, **kwargs):
-        for eval_type in EVAL_TYPES:
+    def print(self, eval_type=None, **kwargs):
+        for eval_type in EVAL_TYPES if eval_type is None else [eval_type]:
             evaluator = self.evaluators.get(eval_type)
             if evaluator:
                 print("Evaluation type: (" + eval_type + ")", **kwargs)
                 evaluator.print(**kwargs)
 
-    def print_confusion_matrix(self, *args, **kwargs):
-        for eval_type in EVAL_TYPES:
+    def print_confusion_matrix(self, *args, eval_type=None, **kwargs):
+        for eval_type in EVAL_TYPES if eval_type is None else [eval_type]:
             evaluator = self.evaluators.get(eval_type)
             if evaluator:
                 evaluator.print_confusion_matrix("Evaluation type: (" + eval_type + ")", *args, **kwargs)
 
-    def fields(self, eval_type=LABELED):
+    def fields(self, eval_type=LABELED, counts=False):
         e = self[eval_type]
-        return ["%.3f" % float(getattr(x, y)) for x in e.results.values() for y in ("p", "r", "f1")]
+        attrs = ("num_guessed", "num_ref", "num_matches") if counts else ("p", "r", "f1")
+        return ["%.3f" % float(getattr(x, y)) for x in e.results.values() for y in attrs]
 
-    def titles(self, eval_type=LABELED):
-        return self.field_titles(self[eval_type].results.keys(), eval_type=eval_type)
+    def titles(self, eval_type=LABELED, counts=False):
+        return self.field_titles(self[eval_type].results.keys(), eval_type=eval_type, counts=counts)
 
     @staticmethod
-    def field_titles(constructions=DEFAULT, eval_type=LABELED):
+    def field_titles(constructions=DEFAULT, eval_type=LABELED, counts=False):
+        titles = ("guessed", "ref", "matches") if counts else ("precision", "recall", "f1")
         return ["_".join(((str(x),) if len(constructions) > 1 else ()) + (eval_type, y))
-                for x in constructions for y in ("precision", "recall", "f1")]
+                for x in constructions for y in titles]
 
     def __getitem__(self, eval_type):
         return self.evaluators[eval_type]
@@ -240,7 +234,7 @@ class EvaluatorResults:
             stats.print(**kwargs)
         print(**kwargs)
 
-    def print_confusion_matrix(self, prefix=None, sep=None, **kwargs):
+    def print_confusion_matrix(self, prefix=None, sep=None, as_table=False, **kwargs):
         primary = self[PRIMARY]
         if primary.errors:
             errors = primary.errors.most_common()
@@ -250,10 +244,19 @@ class EvaluatorResults:
                     print(sep.join(error + (str(freq),)), **kwargs)
             else:
                 print("\n%sConfusion Matrix:" % ("" if prefix is None else (prefix + ", ")), **kwargs)
-                for error, freq in errors:
-                    l1 = max(len(e1) for e1, _ in primary.errors)
-                    l2 = max(len(e2) for _, e2 in primary.errors)
-                    print("%-*s %-*s %d" % (l1, error[0], l2, error[1], freq), **kwargs)
+                if as_table:
+                    y_labels = sorted(set(x[0][1] for x in errors))
+                    print("", *y_labels, sep="\t")
+                    for x, x_errors in groupby(sorted(errors), key=lambda x: x[0][0]):
+                        errors_by_y = Counter()
+                        for (_, y), f in x_errors:
+                            errors_by_y[y] += f
+                        print(x, *[errors_by_y.get(y, 0) for y in y_labels], sep="\t")
+                else:
+                    for error, freq in errors:
+                        l1 = max(len(e1) for e1, _ in primary.errors)
+                        l2 = max(len(e2) for _, e2 in primary.errors)
+                        print("%-*s %-*s %d" % (l1, error[0], l2, error[1], freq), **kwargs)
 
     @classmethod
     def aggregate(cls, results):
@@ -337,7 +340,7 @@ def evaluate(guessed, ref, converter=None, verbose=False, constructions=DEFAULT,
     if converter is not None:
         guessed = converter(guessed)
         ref = converter(ref)
-    if normalize:
+    if normalize:  # FIXME clone passages to avoid modifying the original ones
         for passage in (guessed, ref):
             normalization.normalize(passage)  # flatten Cs inside Cs
         move_functions(guessed, ref)  # move common Fs to be under the root

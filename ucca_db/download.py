@@ -3,9 +3,9 @@ from argparse import ArgumentParser
 from tqdm import tqdm
 from xml.etree.ElementTree import tostring
 
-from scripts.ucca_db2 import get_by_xids, get_most_recent_passage_by_uid
 from ucca import convert
 from ucca.ioutil import write_passage, external_write_mode
+from ucca_db.api import get_by_xids, get_most_recent_passage_by_uid
 
 desc = "Download passages from old UCCA annotation app"
 
@@ -21,13 +21,18 @@ def get_by_method(method, id_field, passage_id=None, **kwargs):
 def main(args):
     os.makedirs(args.outdir, exist_ok=True)
     with open(args.filename, encoding="utf-8") as f:
-        t = tqdm(list(map(str.split, f)), desc="Downloading", unit=" passages")
+        t = list(map(str.split, f))
+        if not args.verbose:
+            t = tqdm(t, desc="Downloading", unit=" passages")
         for passage_id, id_field in t:
-            t.set_postfix({"passage_id": passage_id, args.method: id_field})
+            if not args.verbose:
+                t.set_postfix({"passage_id": passage_id, args.method: id_field})
             if args.verbose:
                 with external_write_mode():
-                    print("Getting passage " + passage_id + " with " + args.method + "=" + id_field)
-            xml_root = get_by_method(id_field=id_field, passage_id=passage_id, **vars(args))
+                    print("Getting passage " + passage_id + " with " + args.method + "=" + id_field, end="\t")
+            xml_root = get_by_method(id_field=id_field.split(","), passage_id=passage_id, **vars(args))
+            if xml_root is None:
+                continue
             if args.write_site:
                 site_filename = passage_id + "_site_download.xml"
                 with open(site_filename, "w", encoding="utf-8") as fsite:
@@ -49,5 +54,6 @@ if __name__ == "__main__":
     argparser.add_argument("-s", "--write-site", action="store_true", help="write site format, too, for debugging")
     argparser.add_argument("-n", "--no-write", dest="write", action="store_false", help="do not really write any files")
     argparser.add_argument("-x", "--write-xids", help="file to write xids to (for `uid' method)")
+    argparser.add_argument("-S", "--strict", action="store_true", help="fail if no result is found")
     argparser.add_argument("-v", "--verbose", action="store_true", help="print tagged text for each passage")
     main(argparser.parse_args())

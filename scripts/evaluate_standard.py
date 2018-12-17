@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """The evaluation script for UCCA layer 1."""
-import sys
-from itertools import repeat
-
 from argparse import ArgumentParser
+from itertools import repeat
 
 from ucca import evaluation, constructions, ioutil
 
@@ -15,20 +13,24 @@ def main(args):
         guessed = match_by_id(guessed, ref)
         ref_yield_tags = match_by_id(ref_yield_tags, ref)
     results = []
+    eval_type = evaluation.UNLABELED if args.unlabeled else evaluation.LABELED
+    verbose = args.verbose or len(guessed) == 1
     for g, r, ryt in zip(guessed, ref, ref_yield_tags or repeat(None)):
         if len(guessed) > 1:
-            sys.stdout.write("\rEvaluating %s%s" % (g.ID, ":" if args.verbose else "..."))
-            sys.stdout.flush()
+            print("Evaluating %s%s" % (g.ID, ":" if args.verbose else "..."), end="\r", flush=True)
         if args.verbose:
             print()
         result = evaluation.evaluate(g, r, constructions=args.constructions, units=args.units, fscore=args.fscore,
-                                     errors=args.errors, verbose=args.verbose or len(guessed) == 1,
+                                     errors=args.errors, verbose=verbose,
                                      normalize=args.normalize, ref_yield_tags=ryt,
                                      eval_type=evaluation.UNLABELED if args.unlabeled else None)
-        if args.verbose:
-            print_f1(result, args.unlabeled)
+        if verbose:
+            if args.errors:
+                result.print_confusion_matrix(as_table=args.as_table)
+            if not args.quiet:
+                print_f1(result, eval_type)
         results.append(result)
-    summarize(args, results)
+    summarize(args, results, eval_type=eval_type)
 
 
 def match_by_id(guessed, ref):
@@ -39,8 +41,7 @@ def match_by_id(guessed, ref):
     if len(guessed) > 1:
         guessed_by_id = {}
         for g in guessed:
-            sys.stdout.write("\rReading %s..." % g.ID)
-            sys.stdout.flush()
+            print("Reading %s..." % g.ID, end="\r", flush=True)
             guessed_by_id[g.ID] = g
         ids = [p.ID for p in ref]
         try:
@@ -50,36 +51,36 @@ def match_by_id(guessed, ref):
     return guessed
 
 
-def print_f1(result, unlabeled=False):
-    print("Average %slabeled F1 score: %.3f" % ("un" if unlabeled else "", result.average_f1(
-        evaluation.UNLABELED if unlabeled else evaluation.LABELED)))
+def print_f1(result, eval_type):
+    print("Average %s F1 score: %.3f" % (eval_type, result.average_f1(eval_type)))
 
 
-def summarize(args, results):
+def summarize(args, results, eval_type):
     summary = evaluation.Scores.aggregate(results)
     if len(results) > 1:
         if args.verbose:
             print("Aggregated scores:")
         else:
-            print(end="\r")
             if not args.quiet:
                 if args.fscore:
                     summary.print()
                 elif args.errors:
-                    summary.print_confusion_matrix()
+                    print(args.guessed, args.ref)
+                    summary.print_confusion_matrix(as_table=args.as_table)
         if not args.quiet:
-            print_f1(summary, args.unlabeled)
+            print_f1(summary, eval_type=eval_type)
     if args.out_file:
         with open(args.out_file, "w", encoding="utf-8") as f:
-            print(",".join(summary.titles()), file=f)
+            print(*summary.titles(eval_type=eval_type), sep=",", file=f)
             for result in results:
-                print(",".join(result.fields()), file=f)
+                print(*result.fields(eval_type=eval_type), sep=",", file=f)
         print("Wrote '%s'" % args.out_file)
-    if args.summary_file:
-        with open(args.summary_file, "w", encoding="utf-8") as f:
-            print(",".join(summary.titles()), file=f)
-            print(",".join(summary.fields()), file=f)
-        print("Wrote '%s'" % args.summary_file)
+    for filename, counts in ((args.summary_file, False), (args.counts_file, True)):
+        if filename:
+            with open(filename, "w", encoding="utf-8") as f:
+                print(*summary.titles(eval_type=eval_type, counts=counts), sep=",", file=f)
+                print(*summary.fields(eval_type=eval_type, counts=counts), sep=",", file=f)
+            print("Wrote '%s'" % filename)
     if args.errors_file:
         with open(args.errors_file, "w", encoding="utf-8") as f:
             summary.print_confusion_matrix(sep=",", file=f)
@@ -113,9 +114,11 @@ if __name__ == "__main__":
                            help="do not normalize passages before evaluation")
     argparser.add_argument("-I", "--no-match-by-id", dest="match_by_id", action="store_false",
                            help="do not match passages by ID, instead matching by order")
+    argparser.add_argument("--as-table", action="store_true", help="if given --errors, print confusion matrix as table")
     argparser.add_argument("--unlabeled", action="store_true", help="only unlabeled evaluation")
     argparser.add_argument("--out-file", help="file to write results for each evaluated passage to, in CSV format")
-    argparser.add_argument("--summary-file", help="file to write aggregated results to, in CSV format")
+    argparser.add_argument("--summary-file", help="file to write aggregated scores to, in CSV format")
+    argparser.add_argument("--counts-file", help="file to write aggregated counts to, in CSV format")
     argparser.add_argument("--errors-file", help="file to write aggregated confusion matrix to, in CSV format")
     group = argparser.add_mutually_exclusive_group()
     group.add_argument("-v", "--verbose", action="store_true",

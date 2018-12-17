@@ -4,7 +4,7 @@ from ucca import core, layer0
 
 
 def test_terminals():
-    """Tests :class:layer0.Terminal new and inherited functionality."""
+    """Tests :class:`layer0`.Terminal new and inherited functionality."""
     p = core.Passage("1")
     layer0.Layer0(p)
     terms = [

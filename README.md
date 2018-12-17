@@ -21,7 +21,7 @@ and `convert` modules under the `ucca` package).
 
 The `scripts` package contains various utilities for processing passage files.
 
-To parse text to UCCA graphs, use [TUPA, the UCCA parser](http://www.cs.huji.ac.il/~danielh/ucca).
+To parse text to UCCA graphs, use [TUPA, the UCCA parser](http://www.cs.huji.ac.il/~danielh/tupa).
 
 
 Authors
@@ -36,4 +36,5 @@ This package is licensed under the GPLv3 or later license.
 
 [![Build Status (Travis CI)](https://travis-ci.org/danielhers/ucca.svg?branch=master)](https://travis-ci.org/danielhers/ucca)
 [![Build Status (AppVeyor)](https://ci.appveyor.com/api/projects/status/github/danielhers/ucca?svg=true)](https://ci.appveyor.com/project/danielh/ucca)
+[![Build Status (Docs)](https://readthedocs.org/projects/ucca/badge/?version=latest)](http://ucca.readthedocs.io/en/latest/)
 [![PyPI version](https://badge.fury.io/py/UCCA.svg)](https://badge.fury.io/py/UCCA)

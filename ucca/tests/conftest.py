@@ -14,7 +14,7 @@ def empty():
 
 
 def basic():
-    """Creates a basic :class:Passage to tinker with.
+    """Creates a basic :class:`Passage` to tinker with.
 
     Passage structure is as follows:
         Layer1: order by ID, heads = [1.2], all = [1.1, 1.2, 1.3]
@@ -136,7 +136,7 @@ def l1_passage():
 
 
 def multi_sent():
-    """Creates a :class:Passage with multiple sentences and paragraphs.
+    """Creates a :class:`Passage` with multiple sentences and paragraphs.
 
     Passage: [1 2 [3 P] H] . [[5 6 . P] H]
              [[8 P] . 10 . H]
@@ -175,7 +175,7 @@ def multi_sent():
 
 
 def crossing():
-    """Creates a :class:Passage with multiple sentences and paragraphs, with crossing edges.
+    """Creates a :class:`Passage` with multiple sentences and paragraphs, with crossing edges.
 
     Passage: [1 2 [3 P(remote)] H] .
              [[3 P] . 4 . H]

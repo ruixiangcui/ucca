@@ -1,4 +1,7 @@
+from itertools import groupby
+
 import string
+from operator import attrgetter
 
 from ucca import layer0, layer1
 from ucca.layer0 import NodeTags as L0Tags
@@ -7,7 +10,7 @@ from ucca.layer1 import EdgeTags as ETags, NodeTags as L1Tags
 LINKAGE = (ETags.LinkArgument, ETags.LinkRelation)
 
 
-def validate(passage, linkage=True):
+def validate(passage, linkage=True, multigraph=False):
     for node in passage.layer(layer0.LAYER_ID).all:
         yield from NodeValidator(node).validate_terminal()
     heads = list(passage.layer(layer1.LAYER_ID).heads)
@@ -29,7 +32,8 @@ def validate(passage, linkage=True):
                 path.append(node)
                 path_set.add(node)
                 stack.append(node.children)
-                yield from NodeValidator(node).validate_non_terminal(linkage=linkage and found_linkage)
+                yield from NodeValidator(node).validate_non_terminal(linkage=linkage and found_linkage,
+                                                                     multigraph=multigraph)
                 break
         else:
             if path:
@@ -66,7 +70,7 @@ class NodeValidator:
         if s:
             yield "Top-level node (%s) with %s edge" % (self.node.ID, join(s))
 
-    def validate_non_terminal(self, linkage=False):
+    def validate_non_terminal(self, linkage=False, multigraph=False):
         if linkage and self.node.tag == L1Tags.Linkage:
             yield from self.validate_linkage()
         elif self.node.tag == L1Tags.Foundational:
@@ -106,6 +110,13 @@ class NodeValidator:
                 yield "%s node (%s) with outgoing %s edge: %s" % (ETags.Function, self.node.ID, join(s), self.node)
         if ETags.Linker in self.incoming_tags and linkage and ETags.LinkRelation not in self.incoming_tags:
             yield "%s node (%s) with no incoming %s" % (ETags.Linker, self.node.ID, ETags.LinkRelation)
+        if not multigraph:
+            key = attrgetter("child.ID")
+            for child_id, edges in groupby(sorted(self.node, key=key), key=key):
+                edges = list(edges)
+                if len(edges) > 1:
+                    yield "Multiple %s->%s edges: %s" % (self.node.ID, child_id, ", ".join(
+                        "%d %s" % (len(e), t) for t, e in tag_to_edge(edges).items()))
 
     def validate_linkage(self):
         if self.node.incoming:

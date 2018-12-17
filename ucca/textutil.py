@@ -205,7 +205,7 @@ def annotate_all(passages, replace=False, as_array=False, as_tuples=False, lang=
     :param lang: optional two-letter language code, will be overridden if passage has "lang" attrib
     :param vocab: optional dictionary of vocabulary IDs to string values, to avoid loading spaCy model
     :param verbose: whether to print annotated text
-    :return generator of annotated passages, which are actually modified in-place (same objects as input)
+    :return: generator of annotated passages, which are actually modified in-place (same objects as input)
     """
     if not as_tuples:
         passages = ((p,) for p in passages)
@@ -277,7 +277,7 @@ def break2sentences(passage, lang="en", *args, **kwargs):
     SENTENCE_END_MARKS, and is also the end of a paragraph or parallel scene.
     :param passage: the Passage object to operate on
     :param lang: optional two-letter language code
-    :return a list of positions in the Passage, each denotes a closing Terminal of a sentence.
+    :return: a list of positions in the Passage, each denotes a closing Terminal of a sentence.
     """
     del args, kwargs
     l1 = passage.layer(layer1.LAYER_ID)
@@ -316,7 +316,7 @@ def break2paragraphs(passage, return_terminals=False, *args, **kwargs):
     Uses the `paragraph' attribute of layer 0 to find paragraphs.
     :param passage: the Passage object to operate on
     :param return_terminals: whether to return actual Terminal objects of all terminals rather than just end positions
-    :return a list of positions in the Passage, each denotes a closing Terminal of a paragraph.
+    :return: a list of positions in the Passage, each denotes a closing Terminal of a paragraph.
     """
     del args, kwargs
     terminals = list(extract_terminals(passage))
@@ -333,7 +333,7 @@ def indent_xml(xml_as_string):
     This works only for units with no text or tail members, and only for
     strings whose leaves are written as <tag /> and not <tag></tag>.
     :param xml_as_string: XML string to indent
-    :return indented XML string
+    :return: indented XML string
     """
     tabs = 0
     lines = str(xml_as_string).replace('><', '>\n<').splitlines()

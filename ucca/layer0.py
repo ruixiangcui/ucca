@@ -1,10 +1,10 @@
 """Encapsulates all word and punctuation symbols layer.
 
 Layer 0 is the basic layer for all the UCCA annotation, as it includes the
-actual words and punctuation marks found in the :class:core.Passage.
+actual words and punctuation marks found in the :class:`core`.Passage.
 
-Layer 0 has only one type of node, :class:Terminal. This is a subtype of
-:class:core.Node, and can have one of two tags: Word or Punctuation.
+Layer 0 has only one type of node, :class:`Terminal`. This is a subtype of
+:class:`core`.Node, and can have one of two tags: Word or Punctuation.
 
 """
 
@@ -25,14 +25,14 @@ ATTRIB_KEYS = ('text', 'paragraph', 'paragraph_position')
 class Terminal(core.Node):
     """Layer 0 Node type, represents a word or a punctuation mark.
 
-    Terminals are :class:core.Node objects which represent a word or
-    a punctuation mark in the :class:core.Passage object. They are immutable,
+    Terminals are :class:`core`.Node objects which represent a word or
+    a punctuation mark in the :class:`core`.Passage object. They are immutable,
     as they shouldn't be changed throughout their use and have no children.
     Hence, they can be compared and hashed, unlike other core.Node subclasses.
 
     Attributes:
         ID: the unique ID of each Terminal is its global position in the
-        Passage, e.g. ID=0.4 is the 4th Terminal in the :class:Passage.
+        Passage, e.g. ID=0.4 is the 4th Terminal in the :class:`Passage`.
         tag: from NodeTags
         layer: '0' (LAYER_ID)
         attrib: returns a copy of the attribute dictionary, so changing it
@@ -86,7 +86,7 @@ class Terminal(core.Node):
 
         :param punct: whether to include punctuation Terminals, defaults to True
 
-        :return a list of :class:layer0.Terminal objects
+        :return: a list of :class:`layer0`.Terminal objects
         """
         del args, kwargs
         return [] if self.punct and not punct else [self]
@@ -97,7 +97,7 @@ class Terminal(core.Node):
         :param other: another Terminal to equal to
         :param ordered: unused, here for API conformity.
 
-        :return True iff the two Terminals are equal.
+        :return: True iff the two Terminals are equal.
         """
         return (self.layer.ID == other.layer.ID and self.text == other.text
                 and self.position == other.position and self.tag == other.tag
@@ -131,7 +131,7 @@ class Terminal(core.Node):
 
 
 class Layer0(core.Layer):
-    """Represents the :class:Terminal objects layer.
+    """Represents the :class:`Terminal` objects layer.
 
     Attributes:
         words: a tuple of only the words (not punctuation) Terminals, ordered
@@ -154,22 +154,22 @@ class Layer0(core.Layer):
         """Returns the Terminals at the position given.
 
         :param pos: the position of the Terminal object
-        :return the Terminal in this position
-        :raise IndexError if the position is out of bounds
+        :return: the Terminal in this position
+        :raise IndexError: if the position is out of bounds
         """
         return self._all[pos - 1]  # positions start at 1, not 0
 
     def add_terminal(self, text, punct, paragraph=1):
         """Adds the next Terminal at the next available position.
 
-        Creates a :class:Terminal object with the next position, assuming that
+        Creates a :class:`Terminal` object with the next position, assuming that
         all positions are filled (no holes).
 
         :param text: the text of the Terminal
         :param punct: boolean, whether it's a punctuation mark
         :param paragraph: paragraph number, defaults to 1
 
-        :return the created Terminal
+        :return: the created Terminal
 
         :raise DuplicateIdError: if trying to add an already existing Terminal,
                 caused by un-ordered Terminal positions in the layer

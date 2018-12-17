@@ -60,7 +60,7 @@ def replace_center(edge):
     if len(edge.parent) == 1 and not edge.parent.parents:
         return ETags.ParallelScene
     if edge.parent.participants and not edge.parent.is_scene():
-        return ETags.Process
+        return ETags.Process  # TODO should be state if the word is a copula
     return edge.tag
 
 
@@ -68,6 +68,16 @@ def replace_edge_tags(node):
     for edge in node:
         if not edge.attrib.get("remote") and edge.tag == ETags.Center:
             edge.tag = replace_center(edge)
+        elif node.parallel_scenes:
+            if edge.tag == ETags.Connector:
+                edge.tag = ETags.Linker
+        elif edge.tag == ETags.Linker:
+            edge.tag = ETags.Connector
+        elif node.is_scene():
+            if edge.tag == ETags.Elaborator:
+                edge.tag = ETags.Adverbial
+        elif edge.tag == ETags.Adverbial:
+            edge.tag = ETags.Elaborator
 
 
 def move_elements(node, tags, parent_tags, forward=True):

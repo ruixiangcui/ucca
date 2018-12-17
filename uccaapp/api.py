@@ -23,22 +23,39 @@ RETRY_WAIT_DURATION = 60
 
 
 class ServerAccessor:
-    def __init__(self, server_address, email, password, auth_token, project_id, source_id, verbose, **kwargs):
-        if verbose:
-            logging.basicConfig(level=logging.DEBUG)
+    def __init__(self, server_address, email, password, auth_token=None, verbose=False, **kwargs):
+        logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
         server_address = server_address or os.environ.get(SERVER_ADDRESS_ENV_VAR, DEFAULT_SERVER)
         self.prefix = server_address + API_PREFIX
         self.headers = {}  # Needed for self.request (login)
-        token = auth_token or os.environ.get(AUTH_TOKEN_ENV_VAR) or self.login(
-            email or os.environ[EMAIL_ENV_VAR], password or os.environ[PASSWORD_ENV_VAR])["token"]
+        try:
+            token = auth_token or os.environ.get(AUTH_TOKEN_ENV_VAR) or self.login(
+                email or os.environ[EMAIL_ENV_VAR], password or os.environ[PASSWORD_ENV_VAR])["token"]
+        except KeyError as e:
+            raise ValueError("Must set either --auth-token, or --email and --password."
+                             "Alternatively, set the %s environment variable, or %s and %s" %
+                             (AUTH_TOKEN_ENV_VAR, EMAIL_ENV_VAR, PASSWORD_ENV_VAR)) from e
         self.headers["Authorization"] = "Token " + token
-        self.source = self.get_source(source_id or int(os.environ[SOURCE_ID_ENV_VAR]))
-        self.project = self.get_project(project_id or int(os.environ[PROJECT_ID_ENV_VAR]))
+        self.source = self.project = self.layer = self.user = None
+
+    def set_source(self, source_id=None):
+        try:
+            self.source = self.get_source(int(os.environ[SOURCE_ID_ENV_VAR]) if source_id is None else source_id)
+        except KeyError as e:
+            raise ValueError("Must set --source-id or the %s environment variable" % SOURCE_ID_ENV_VAR) from e
+
+    def set_project(self, project_id=None):
+        try:
+            self.project = self.get_project(int(os.environ[PROJECT_ID_ENV_VAR]) if project_id is None else project_id)
+        except KeyError as e:
+            raise ValueError("Must set --project-id or the %s environment variable" % PROJECT_ID_ENV_VAR) from e
         self.layer = self.get_layer(self.project["layer"]["id"])
-        self.user = None
 
     def set_user(self, user_id=None):
-        self.user = dict(id=user_id or int(os.environ[USER_ID_ENV_VAR]))
+        try:
+            self.user = dict(id=int(os.environ[USER_ID_ENV_VAR]) if user_id is None else user_id)
+        except KeyError as e:
+            raise ValueError("Must set --user-id or the %s environment variable" % USER_ID_ENV_VAR) from e
 
     @staticmethod
     def add_arguments(argparser):
@@ -47,9 +64,15 @@ class ServerAccessor:
         argparser.add_argument("--password", help="UCCA-App password, otherwise set by " + PASSWORD_ENV_VAR)
         argparser.add_argument("--auth-token", help="authorization token (required only if email or password missing), "
                                                     "otherwise set by " + AUTH_TOKEN_ENV_VAR)
-        argparser.add_argument("--project-id", type=int, help="project id, otherwise set by " + PROJECT_ID_ENV_VAR)
-        argparser.add_argument("--source-id", type=int, help="source id, otherwise set by " + SOURCE_ID_ENV_VAR)
         argparser.add_argument("-v", "--verbose", action="store_true", help="detailed output")
+
+    @staticmethod
+    def add_source_id_argument(argparser):
+        argparser.add_argument("--source-id", type=int, help="source id, otherwise set by " + SOURCE_ID_ENV_VAR)
+
+    @staticmethod
+    def add_project_id_argument(argparser):
+        argparser.add_argument("--project-id", type=int, help="project id, otherwise set by " + PROJECT_ID_ENV_VAR)
 
     @staticmethod
     def add_user_id_argument(argparser):
@@ -86,6 +109,18 @@ class ServerAccessor:
         logging.debug("Got layer: " + json.dumps(layer_out))
         return layer_out
 
+    def get_category(self, category_id):
+        logging.debug("Getting category %d" % category_id)
+        category_out = self.request("get", "categories/%d/" % category_id).json()
+        logging.debug("Got category: " + json.dumps(category_out))
+        return category_out
+
+    def create_category(self, **kwargs):
+        logging.debug("Creating category: " + json.dumps(kwargs))
+        category_out = self.request("post", "categories/", json=kwargs).json()
+        logging.debug("Created category: " + json.dumps(category_out))
+        return category_out
+
     def get_user(self, user_id):
         logging.debug("Getting user "+user_id)
         user_out = self.request("get", "users/%s/" % user_id).json()
@@ -116,24 +151,19 @@ class ServerAccessor:
         logging.debug("Created passage: " + json.dumps(passage_out))
         return passage_out
 
-    def create_tokenization_task(self, **kwargs):
-        logging.debug("Creating tokenization task: " + json.dumps(kwargs))
-        tok_task_out = self.request("post", "tasks/", json=kwargs).json()
-        logging.debug("Created tokenization task: " + json.dumps(tok_task_out))
-        return tok_task_out
+    def create_task(self, **kwargs):
+        task_type = kwargs["type"].lower()
+        logging.debug("Creating " + task_type + " task: " + json.dumps(kwargs))
+        task_out = self.request("post", "tasks/", json=kwargs).json()
+        logging.debug("Created " + task_type + " task: " + json.dumps(task_out))
+        return task_out
 
     def submit_tokenization_task(self, **kwargs):
         logging.debug("Submitting tokenization task: " + json.dumps(kwargs))
         self.request("put", "user_tasks/%d/draft" % kwargs["id"], json=kwargs)
-        tok_user_task_out = self.request("put", "user_tasks/%d/submit" % kwargs["id"]).json()
+        tok_user_task_out = self.request("put", "user_tasks/%d/submit" % kwargs["id"], json=kwargs).json()
         logging.debug("Submitted tokenization task: " + json.dumps(tok_user_task_out))
         return tok_user_task_out
-
-    def create_annotation_task(self, **kwargs):
-        logging.debug("Creating annotation task: " + json.dumps(kwargs))
-        ann_task_out = self.request("post", "tasks/", json=kwargs).json()
-        logging.debug("Created annotation task: " + json.dumps(ann_task_out))
-        return ann_task_out
 
     def submit_annotation_task(self, **kwargs):
         logging.debug("Submitting annotation task: " + json.dumps(kwargs))

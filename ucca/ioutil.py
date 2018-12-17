@@ -69,11 +69,11 @@ class LazyLoadedPassages:
                     attempts -= 1
                 try:
                     passage = file2passage(file)  # XML or binary format
-                except (IOError, ParseError):  # Failed to read as passage file
+                except (IOError, ParseError) as e:  # Failed to read as passage file
                     base, ext = os.path.splitext(os.path.basename(file))
                     converter = self.converters.get(ext.lstrip("."))
                     if converter is None:
-                        raise
+                        raise IOError("Could not read %s file. Try adding '.txt' suffix: '%s'" % (ext, file)) from e
                     self._file_handle = open(file, encoding="utf-8")
                     self._split_iter = iter(converter(chain(self._file_handle, [""]), passage_id=base, lang=self.lang))
             if self.split:
@@ -117,7 +117,7 @@ def get_passages_with_progress_bar(filename_patterns, desc=None, **kwargs):
 
 def get_passages(filename_patterns, **kwargs):
     for pattern in [filename_patterns] if isinstance(filename_patterns, str) else filename_patterns:
-        for filenames in glob(pattern) or [pattern]:
+        for filenames in sorted(glob(pattern)) or [pattern]:
             yield from read_files_and_dirs(filenames, **kwargs)
 
 
@@ -128,7 +128,8 @@ def gen_files(files_and_dirs):
     """
     for file_or_dir in [files_and_dirs] if isinstance(files_and_dirs, str) else files_and_dirs:
         if os.path.isdir(file_or_dir):
-            yield from filterfalse(os.path.isdir, (os.path.join(file_or_dir, f) for f in os.listdir(file_or_dir)))
+            yield from filterfalse(os.path.isdir, (os.path.join(file_or_dir, f)
+                                                   for f in sorted(os.listdir(file_or_dir))))
         else:
             yield file_or_dir
 
@@ -165,6 +166,7 @@ def write_passage(passage, output_format=None, binary=False, outdir=".", prefix=
     :param basename: use this instead of `passage.ID' for the output filename
     :return: path of created output file
     """
+    os.makedirs(outdir, exist_ok=True)
     suffix = output_format if output_format and output_format != "ucca" else ("pickle" if binary else "xml")
     outfile = os.path.join(outdir, prefix + (basename or passage.ID) + "." + suffix)
     if verbose:

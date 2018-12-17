@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+import sys
+
 import argparse
 import re
-import sys
 from glob import glob
 
 from ucca.convert import to_json, from_text
@@ -16,15 +17,17 @@ desc = """Upload passages from CoNLL-U files including complete tokenization, an
 
 
 class ConlluPassageUploader(ServerAccessor):
-    def __init__(self, user_id, annotation_user_id, **kwargs):
+    def __init__(self, user_id, annotation_user_id, source_id, project_id, **kwargs):
         super().__init__(**kwargs)
+        self.set_source(source_id)
+        self.set_project(project_id)
         self.set_user(user_id)
         self.annotation_user = dict(id=annotation_user_id) if annotation_user_id else self.user
         
     def upload_passages(self, filenames, **kwargs):
         del kwargs
         for pattern in filenames:
-            filenames = glob(pattern)
+            filenames = sorted(glob(pattern))
             if not filenames:
                 raise IOError("Not found: " + pattern)
             for filename in sorted(filenames):
@@ -56,7 +59,7 @@ class ConlluPassageUploader(ServerAccessor):
         task_in = dict(type="TOKENIZATION", status="SUBMITTED", project=self.project, user=self.user,
                        passage=passage_out, manager_comment="External ID: "+external_id,
                        user_comment="", parent=None, is_demo=False, is_active=True)
-        tok_task_out = self.create_tokenization_task(**task_in)
+        tok_task_out = self.create_task(**task_in)
         tok_user_task_in = dict(tok_task_out)
         passage = list(from_text(tokens, tokenized=True))[0]
         tok_user_task_in.update(to_json(passage, return_dict=True, tok_task=True))
@@ -64,12 +67,14 @@ class ConlluPassageUploader(ServerAccessor):
         task_in = dict(type="ANNOTATION", status="NOT_STARTED", project=self.project, user=self.annotation_user,
                        passage=tok_task_out["passage"], manager_comment="External ID: "+external_id,
                        user_comment="", parent=tok_task_out, is_demo=False, is_active=True)
-        self.create_annotation_task(**task_in)
+        self.create_task(**task_in)
         print("Uploaded passage "+external_id+" successfully")
 
     @staticmethod
     def add_arguments(argparser):
         argparser.add_argument("filenames", nargs="+", help="filename pattern of CoNLL-U files")
+        ServerAccessor.add_project_id_argument(argparser)
+        ServerAccessor.add_source_id_argument(argparser)
         ServerAccessor.add_user_id_argument(argparser)
         argparser.add_argument("--annotation-user-id", type=int, help="user id for annotation tasks, if different")
         ServerAccessor.add_arguments(argparser)
