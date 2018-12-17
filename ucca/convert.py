@@ -619,7 +619,6 @@ def to_standard(passage):
                     category_elem = ET.SubElement(edge_elem, "category", tag=category.tag,
                                                   layer_name=category.layer, slot=str(category.slot),
                                                   parent_name="" if not category.parent else category.parent)
-                    _add_attrib(category, category_elem)
                     _add_extra(category, category_elem)
     return root
 
