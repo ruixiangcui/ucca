@@ -23,7 +23,7 @@ import xml.etree.ElementTree as ET
 import xml.sax.saxutils
 from operator import attrgetter, itemgetter
 
-from ucca import textutil, core, layer0, layer1, refinement_layer
+from ucca import textutil, core, layer0, layer1
 from ucca.layer1 import EdgeTags
 from ucca.normalization import attach_punct
 
