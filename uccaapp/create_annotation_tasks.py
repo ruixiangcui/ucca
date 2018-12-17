@@ -24,7 +24,7 @@ class AnnotationTaskCreator(ServerAccessor):
                 user_id = fields[0]
                 user_model = self.get_user(user_id)
                 tok_task_out = self.get_task(fields[1])
-                task_in = dict(type="ANNOTATION", status="SUBMITTED",
+                task_in = dict(type="ANNOTATION", status="NOT_STARTED",
                                project=self.project, user=user_model,
                                passage=tok_task_out["passage"], manager_comment="Reviews corpus",
                                user_comment="Test", parent=tok_task_out,
