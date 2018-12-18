@@ -31,7 +31,7 @@ def main(filenames, write, **kwargs):
             for ref in read_files_and_dirs(filenames):
                 print("Converting passage " + ref.ID + "... ", end="")
                 task = uploader.upload_task(ref)
-                guessed = downloader.download_task(task["id"], write=write, **kwargs)
+                guessed, *_ = downloader.download_task(task["id"], write=write, **kwargs)
                 score = evaluate(guessed, ref, **kwargs)
                 print("F1=%.3f" % score.average_f1())
                 scores.append(score)
