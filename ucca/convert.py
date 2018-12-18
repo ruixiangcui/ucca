@@ -690,8 +690,12 @@ def from_standard(root, extra_funcs=None):
     # Adding edges (must have all nodes before doing so)
     for from_node, edge_elem in edge_elems:
         to_node = passage.nodes[edge_elem.get('toID')]
-        tag = edge_elem.get('type')
-        edge = from_node.add(tag, to_node, edge_attrib=_get_attrib(edge_elem))
+        categories_elems = edge_elem.findall('category')
+        categories = []
+        for category_elem in categories_elems:
+            categories.append((category_elem.get("tag"), category_elem.get("slot"),
+                      category_elem.get("layer_name"), category_elem.get("parent_name")))
+        edge = from_node.add(categories, to_node, edge_attrib=_get_attrib(edge_elem))
         _add_extra(edge, edge_elem)
 
     return passage
