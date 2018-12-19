@@ -901,10 +901,12 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
             for token in children_tokens:
                 token_id_to_preterminal[token["id"]] = node
     # Attach terminals to non-terminals
+    max_slot = max(slot_to_layer.keys())
+    max_slot_layer = slot_to_layer[max_slot]
     for token_id, node in token_id_to_preterminal.items():
         terminal = token_id_to_terminal[token_id]
         if skip_category_mapping or not layer0.is_punct(terminal):
-            node.add([(EdgeTags.Terminal, 1, "tokenization", "")], terminal)
+            node.add([(EdgeTags.Terminal, max_slot, max_slot_layer, "")], terminal)
     return passage
 
 
