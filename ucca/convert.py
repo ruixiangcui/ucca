@@ -845,6 +845,8 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
     category_id_to_parent = {i + 1: {c["id"]: c["parent"] if "parent" in c.keys() else None
                                      for c in categories["categories"] }
                              for i, categories in enumerate(all_categories)} if all_categories else None
+    max_slot = max(slot_to_layer.keys())
+    max_slot_layer = slot_to_layer[max_slot]
     # Assuming topological sort: parents always appear before children
     for unit in sorted(d["annotation_units"], key=itemgetter("is_remote_copy")):  # Get non-remotes first
         tree_id = unit["tree_id"]
@@ -895,14 +897,12 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
                 raise ValueError("Remote copy %s refers to nonexistent unit: %s" % (tree_id, cloned_from_tree_id))
             l1.add_remote(parent_node, categories, node)
         elif not skip_category_mapping and terminal and layer0.is_punct(terminal):
-            tree_id_to_node[tree_id] = l1.add_punct(None, terminal)
+            tree_id_to_node[tree_id] = l1.add_punct(None, terminal, max_slot, max_slot_layer)
         else:
             node = tree_id_to_node[tree_id] = l1.add_fnode(parent_node, categories, implicit=(unit["type"] == "IMPLICIT"))
             for token in children_tokens:
                 token_id_to_preterminal[token["id"]] = node
     # Attach terminals to non-terminals
-    max_slot = max(slot_to_layer.keys())
-    max_slot_layer = slot_to_layer[max_slot]
     for token_id, node in token_id_to_preterminal.items():
         terminal = token_id_to_terminal[token_id]
         if skip_category_mapping or not layer0.is_punct(terminal):

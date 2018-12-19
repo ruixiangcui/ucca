@@ -463,7 +463,7 @@ class Layer1(core.Layer):
         """
         parent.add(edge_categories, child, edge_attrib={'remote': True})
 
-    def add_punct(self, parent, terminal):
+    def add_punct(self, parent, terminal, layer, slot):
         """Adds a PunctNode as the child of parent and the Terminal under it.
 
         :param parent: the parent of the newly created PunctNode. If None, adds
@@ -479,8 +479,8 @@ class Layer1(core.Layer):
             parent = self._head_fnode
         punct_node = PunctNode(root=self.root, tag=NodeTags.Punctuation,
                                ID=self.next_id())
-        parent.add([core.Category(EdgeTags.Punctuation, 1, "tokenization", "")], punct_node)
-        punct_node.add([core.Category(EdgeTags.Terminal, 1, "tokenization", "")], terminal)
+        parent.add([core.Category(EdgeTags.Punctuation, slot, layer, "")], punct_node)
+        punct_node.add([core.Category(EdgeTags.Terminal, slot, layer, "")], terminal)
         return punct_node
 
     def add_linkage(self, relation, *args):
