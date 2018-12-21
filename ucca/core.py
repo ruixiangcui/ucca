@@ -347,8 +347,8 @@ class Edge:
         """ adds a new category to the edge"""
         c = Category(self.root, category[0], category[1], category[2], category[3])
         self._categories.append(c)
-        if len(self._categories) > len(self.root.slot_to_layer):
-            self.root._update_slots_to_layers(self._categories)
+        if len(self._categories) > len(self.root.slots_to_layers):
+            self._root._update_slots_to_layers(self._categories)
         return c
 
     def __repr__(self):
