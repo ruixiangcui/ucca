@@ -301,6 +301,10 @@ class Edge:
         return self._parent
 
     @property
+    def categories(self):
+        return self._categories
+
+    @property
     def child(self):
         return self._child
 
