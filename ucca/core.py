@@ -886,6 +886,7 @@ class Passage:
         self.extra = {}
         self._layers = {}
         self._nodes = {}
+        self._slots_to_layers = {}
         self.frozen = False
 
     @property
@@ -907,6 +908,10 @@ class Passage:
     @property
     def nodes(self):
         return self._nodes.copy()
+
+    @property
+    def slots_to_layers(self):
+        return self._slots_to_layers
 
     def layer(self, ID):
         """Returns the :class:`Layer` object whose ID is given.
@@ -1016,6 +1021,11 @@ class Passage:
         if layer.ID in self._layers:
             raise DuplicateIdError(layer.ID)
         self._layers[layer.ID] = layer
+
+    @ModifyPassage
+    def _update_slot_to_layer(self, edge_categories):
+        for c in edge_categories:
+            self._slots_to_layers[c.slot] = c.layer
 
     @ModifyPassage
     def _add_node(self, node):

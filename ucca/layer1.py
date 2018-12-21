@@ -450,6 +450,8 @@ class Layer1(core.Layer):
                                  ID=self.next_id(), attrib=node_attrib)
         if edge_categories:
             parent.add(edge_categories, fnode)
+        if len(edge_categories) > self.root.slot_to_layer:
+            self.root._update_slot_to_layer(edge_categories)
         return fnode
 
     def add_remote(self, parent, edge_categories, child):
@@ -483,7 +485,7 @@ class Layer1(core.Layer):
         punct_node.add([core.Category(EdgeTags.Terminal, slot, layer, "")], terminal)
         return punct_node
 
-    def add_linkage(self, relation, *args):
+    def add_linkage(self, relation, layer, slot, *args):
         """Adds a Linkage between the link relation and the linked arguments.
 
         Linkage objects are all heads and have no parents.
@@ -498,9 +500,9 @@ class Layer1(core.Layer):
         """
         linkage = Linkage(root=self.root, tag=NodeTags.Linkage,
                           ID=self.next_id())
-        linkage.add([core.Category(EdgeTags.LinkRelation, 1, "tokenization", "")], relation)
+        linkage.add([core.Category(EdgeTags.LinkRelation, slot, layer, "")], relation)
         for arg in args:
-            linkage.add([core.Category(EdgeTags.LinkArgument, 1, "tokenization", "")], arg)
+            linkage.add([core.Category(EdgeTags.LinkArgument, slot, layer, "")], arg)
         return linkage
 
     def _check_top_scene(self, node):
