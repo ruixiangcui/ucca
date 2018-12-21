@@ -450,8 +450,6 @@ class Layer1(core.Layer):
                                  ID=self.next_id(), attrib=node_attrib)
         if edge_categories:
             parent.add(edge_categories, fnode)
-        if len(edge_categories) > len(self.root.slot_to_layer):
-            self.root._update_slot_to_layer(edge_categories)
         return fnode
 
     def add_remote(self, parent, edge_categories, child):

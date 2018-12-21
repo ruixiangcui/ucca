@@ -347,6 +347,8 @@ class Edge:
         """ adds a new category to the edge"""
         c = Category(self.root, category[0], category[1], category[2], category[3])
         self._categories.append(c)
+        if len(self._categories) > len(self.root.slot_to_layer):
+            self.root._update_slots_to_layers(self._categories)
         return c
 
     def __repr__(self):
@@ -1023,7 +1025,7 @@ class Passage:
         self._layers[layer.ID] = layer
 
     @ModifyPassage
-    def _update_slot_to_layer(self, edge_categories):
+    def _update_slots_to_layers(self, edge_categories):
         for c in edge_categories:
             self._slots_to_layers[c.slot] = c.layer
 
