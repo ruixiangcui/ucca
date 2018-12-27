@@ -21,9 +21,6 @@ def get_top_level_ancestor(node):
             parent = parent.fparent
         return parent
 
-def isIntersecting(L1,L2):
-    return set(L1) & set(L2)
-
 def main(output = None, comment = False, categories = (), **kwargs):
     filtered_nodes = []
     for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(**kwargs, write=False):
