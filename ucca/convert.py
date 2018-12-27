@@ -869,7 +869,10 @@ def from_json(lines, *args, skip_category_mapping=False, **kwargs):
         for tag in all_tags:
             if tag in IGNORED_ABBREVIATIONS:
                 continue
-            children_tokens = unit["children_tokens"]
+            if unit["type"] == "IMPLICIT":
+                children_tokens = []
+            else:
+                children_tokens = unit["children_tokens"]
             try:
                 terminal = token_id_to_terminal[children_tokens[0]["id"]] if len(children_tokens) == 1 else None
             except (IndexError, KeyError):
