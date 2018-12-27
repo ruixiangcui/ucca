@@ -35,9 +35,9 @@ class TaskUploader(ServerAccessor):
         self.set_project(project_id)
         self.set_user(user_id)
         
-    def upload_tasks(self, filenames, report=None, **kwargs):
+    def upload_tasks(self, filenames, log=None, **kwargs):
         del kwargs
-        report_h = open(report, "w", encoding="utf-8") if report else None
+        log_h = open(log, "w", encoding="utf-8") if log else None
         try:
             for pattern in filenames:
                 filenames = sorted(glob(pattern))
@@ -45,7 +45,7 @@ class TaskUploader(ServerAccessor):
                     raise IOError("Not found: " + pattern)
                 for passage in read_files_and_dirs(filenames):
                     logging.info("Uploading passage %s" % passage.ID)
-                    task = self.upload_task(passage, report=report_h)
+                    task = self.upload_task(passage, log=log_h)
                     logging.info("Submitted task %d" % task["id"])
                     yield task
         except HTTPError as e:
@@ -54,10 +54,10 @@ class TaskUploader(ServerAccessor):
             except JSONDecodeError:
                 raise ValueError(e.response.text) from e
             finally:
-                if report:
-                    report_h.close()
+                if log:
+                    log_h.close()
 
-    def upload_task(self, passage, report=None):
+    def upload_task(self, passage, log=None):
         passage_out = self.create_passage(text=to_text(passage, sentences=False)[0], type="PUBLIC", source=self.source)
         task_in = dict(type="TOKENIZATION", status="SUBMITTED", project=self.project, user=self.user,
                        passage=passage_out, manager_comment=passage.ID, user_comment=passage.ID, parent=None,
@@ -71,14 +71,14 @@ class TaskUploader(ServerAccessor):
         ann_user_task_in.update(
             to_json(passage, return_dict=True, tok_task=tok_user_task_out, all_categories=self.layer["categories"]))
         ann_user_task_out = self.submit_annotation_task(**ann_user_task_in)
-        if report:
-            print(passage.ID, passage_out["id"], tok_task_out["id"], ann_user_task_out["id"], file=report, sep="\t")
+        if log:
+            print(passage.ID, passage_out["id"], tok_task_out["id"], ann_user_task_out["id"], file=log, sep="\t")
         return ann_user_task_out
 
     @staticmethod
     def add_arguments(argparser):
         argparser.add_argument("filenames", nargs="+", help="passage file names to convert and upload")
-        argparser.add_argument("-r", "--report", help="filename to write report of uploaded passages to")
+        argparser.add_argument("-l", "--log", help="filename to write log of uploaded passages to")
         ServerAccessor.add_project_id_argument(argparser)
         ServerAccessor.add_source_id_argument(argparser)
         ServerAccessor.add_user_id_argument(argparser)

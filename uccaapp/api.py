@@ -85,7 +85,11 @@ class ServerAccessor:
             if response.status_code != 500:
                 break
             sleep(RETRY_WAIT_DURATION)
-        response.raise_for_status()
+
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            raise requests.exceptions.HTTPError(response.text) from e
         return response
 
     def login(self, email, password):
