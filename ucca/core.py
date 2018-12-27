@@ -498,8 +498,8 @@ class Node:
                     child=node, attrib=edge_attrib)
         for category in edge_categories:
             edge.add(category)
-        if len(edge.catgories) > 1:
-            for category in edge.catgories:
+        if len(edge.categories) > 1:
+            for category in edge.categories:
                 if category.parent == "" and category.tag not in self.root.refinement_categories:
                     self.root._update_refinement_categories(category.tag)
         self._outgoing.append(edge)
