@@ -18,8 +18,8 @@ class TaskDownloader(ServerAccessor):
         if by_filename:
             task_ids_from_file = []
             for filename in task_ids:
-                with open(filename,'r') as f:
-                    task_ids_from_file.extend([x.strip() for x in f])
+                with open(filename, 'r') as f:
+                    task_ids_from_file.extend(list(filter(None, map(str.strip, f))))
             task_ids = task_ids_from_file
         for task_id in task_ids:
             yield self.download_task(task_id, **kwargs)
@@ -36,8 +36,8 @@ class TaskDownloader(ServerAccessor):
     @staticmethod
     def add_arguments(argparser):
         argparser.add_argument("task_ids", nargs="+", help="IDs of tasks to download and convert")
-        argparser.add_argument("-f","--by-filename",
-                               action="store_true",help="if true, task_ids is a filename, if false, it is a list of IDs")
+        argparser.add_argument("-f", "--by-filename", action="store_true",
+                               help="if true, task_ids is a filename, if false, it is a list of IDs")
         TaskDownloader.add_write_arguments(argparser)
         ServerAccessor.add_arguments(argparser)
 
