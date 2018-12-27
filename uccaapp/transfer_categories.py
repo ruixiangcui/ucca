@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-import sys
 import argparse
 from ucca.convert import from_json
-from uccaapp.api_static import ServerAccessorStatic
+from uccaapp.api import ServerAccessor
 
 desc = """Download task from UCCA-App and convert to a passage in standard format"""
 
@@ -19,10 +18,10 @@ def add_arguments(argparser):
 
 
 def main(args):
-    server_accessor_origin = ServerAccessorStatic(server_address=args.server_address_orig, \
-                                                  email=args.email_orig, password=args.password_orig,auth_token=None,verbose=True)
-    server_accessor_target = ServerAccessorStatic(server_address=args.server_address_target, \
-                                                  email=args.email_target, password=args.password_target,auth_token=None,verbose=True)
+    server_accessor_origin = ServerAccessor(server_address=args.server_address_orig,
+                                            email=args.email_orig, password=args.password_orig,auth_token=None,verbose=True)
+    server_accessor_target = ServerAccessor(server_address=args.server_address_target,
+                                            email=args.email_target, password=args.password_target,auth_token=None,verbose=True)
     for category_id in args.category_ids:
         #try:
         category_out = server_accessor_origin.get_category(category_id)
@@ -39,5 +38,3 @@ if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser(description=desc)
     add_arguments(argument_parser)
     main(argument_parser.parse_args())
-    sys.exit(0)
-
