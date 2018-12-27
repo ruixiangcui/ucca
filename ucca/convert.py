@@ -801,10 +801,10 @@ def to_sequence(passage):
 
 UNANALYZABLE = "Unanalyzable"
 UNCERTAIN = "Uncertain"
-IGNORED_CATEGORIES = {UNANALYZABLE}
+IGNORED_CATEGORIES = {UNANALYZABLE, UNCERTAIN}
+IGNORED_ABBREVIATIONS = {EdgeTags.Unanalyzable,EdgeTags.Uncertain}
 
-
-def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **kwargs):
+def from_json(lines, *args, skip_category_mapping=False, **kwargs):
     """Convert text (or dict) in UCCA-App JSON format to a Passage object.
         According to the API, annotation units are organized in a tree, where the full unit is included as a child of
           its parent: https://github.com/omriabnd/UCCA-App/blob/master/UCCAApp_REST_API_Reference.pdf
@@ -815,12 +815,13 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
           The exception is the first level, where there is just 0, and the next level starts from 1 (not 0-1).
         parent_tree_id: the tree_id of the node's parent, where 0 is the root
     :param lines: iterable of lines in JSON format, describing a single passage.
-    :param all_categories: list of category dicts so that IDs can be resolved to names, if available
     :param skip_category_mapping: if False, translate category names to edge tag abbreviations; if True, don't
     :return: generator of Passage objects
     """
     del args, kwargs
     d = lines if isinstance(lines, dict) else json.loads("".join(lines))
+    all_categories = d["project"]["layer"]["categories"]
+
     passage = core.Passage(str(d.get("id") or d["manager_comment"]))
     # Create terminals
     l0 = layer0.Layer0(passage)
@@ -852,6 +853,9 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
         except KeyError:
             raise ValueError("Unit %s appears before its parent, %s" % (tree_id, parent_tree_id))
         category_name_to_edge_tag = {} if skip_category_mapping else EdgeTags.__dict__
+
+        all_tags = []
+
         for category in unit["categories"]:
             try:
                 category_name = category.get("name") or category_id_to_name[category["id"]]
@@ -859,10 +863,16 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
                 raise ValueError("Missing category name, and no category list available")
             except KeyError:
                 raise ValueError("Category missing from layer: " + category["id"])
-            if category_name in IGNORED_CATEGORIES:
-                continue
             tag = category_name_to_edge_tag.get(category_name.replace(" ", ""), category_name)
-            children_tokens = unit["children_tokens"]
+            all_tags.append(tag)
+
+        for tag in all_tags:
+            if tag in IGNORED_ABBREVIATIONS:
+                continue
+            if unit["type"] == "IMPLICIT":
+                children_tokens = []
+            else:
+                children_tokens = unit["children_tokens"]
             try:
                 terminal = token_id_to_terminal[children_tokens[0]["id"]] if len(children_tokens) == 1 else None
             except (IndexError, KeyError):
@@ -875,10 +885,16 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
                 l1.add_remote(parent_node, tag, node)
             elif not skip_category_mapping and terminal and layer0.is_punct(terminal):
                 tree_id_to_node[tree_id] = l1.add_punct(None, terminal)
-            else:
+            elif tree_id not in tree_id_to_node:
                 node = tree_id_to_node[tree_id] = l1.add_fnode(parent_node, tag, implicit=(unit["type"] == "IMPLICIT"))
+                node.extra['tree_id'] = tree_id
+                comment = unit.get("comment")
+                node.extra["all_tags"] = ';'.join(all_tags)
+                if comment:
+                    node.extra['remarks'] = comment
                 for token in children_tokens:
                     token_id_to_preterminal[token["id"]] = node
+            # currently only supports one non-ignored category, TODO: fix it
     # Attach terminals to non-terminals
     for token_id, node in token_id_to_preterminal.items():
         terminal = token_id_to_terminal[token_id]
