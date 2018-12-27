@@ -35,20 +35,17 @@ def main(output = None, comment = False, categories = (), **kwargs):
                         filtered_nodes.append((str(list(intersection)),node,task_id,user_id))
 
     if output:
-        f = open(output,'w')
-        for filter_type,node,task_id,user_id in filtered_nodes:
-            ancestor = get_top_level_ancestor(node)
-            f.write('\t'.join([filter_type,str(task_id),str(user_id),node.extra.get("tree_id"),node.to_text(),
-                               str(ancestor),str(node.extra.get("remarks")).replace("\n","|")])+'\n')
-        f.close()
+        with open(output,'w') as f:
+            for filter_type,node,task_id,user_id in filtered_nodes:
+                ancestor = get_top_level_ancestor(node)
+                print(filter_type, task_id, user_id, node.extra.get("tree_id"), node.to_text(),
+                      ancestor, str(node.extra.get("remarks")).replace("\n","|"), file=f, sep="\t")
 
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser(description=desc)
     TaskDownloader.add_arguments(argument_parser)
-    argument_parser.add_argument("--output",
-                                 help="output file name")
+    argument_parser.add_argument("--output", help="output file name")
     argument_parser.add_argument("--categories", nargs="+", default=(), help="Abbreviations of the names of the categories to filter by")
     argument_parser.add_argument("--comment", action="store_true", help="Output all the units that have comments")
 
     main(**vars(argument_parser.parse_args()))
-    sys.exit(0)
