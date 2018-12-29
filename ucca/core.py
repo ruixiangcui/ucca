@@ -498,10 +498,12 @@ class Node:
                     child=node, attrib=edge_attrib)
         for category in edge_categories:
             edge.add(category)
-        if len(edge.categories) > 1:
+        if len(edge.categories) > 1: # more than one category for this node, refinement exists.
             for category in edge.categories:
-                if category.parent == "" and category.tag not in self.root.refinement_categories:
-                    self.root._update_refinement_categories(category.tag)
+                if category.tag not in self.root.categories:
+                    self.root._update_categories(category)
+                if category.parent == "" and category.tag not in self.root.refined_categories:
+                    self.root._update_refined_categories(category.tag)
         self._outgoing.append(edge)
         self._outgoing.sort(key=self._orderkey)
         node._incoming.append(edge)
@@ -892,8 +894,8 @@ class Passage:
         self.extra = {}
         self._layers = {}
         self._nodes = {}
-        self._slots_to_layers = {}
-        self._refinement_categories = []
+        self._categories = {}
+        self._refined_categories = []
         self.frozen = False
 
     @property
@@ -917,12 +919,12 @@ class Passage:
         return self._nodes.copy()
 
     @property
-    def slots_to_layers(self):
-        return self._slots_to_layers
+    def categories(self):
+        return self._categories
 
     @property
-    def refinement_categories(self):
-        return self._refinement_categories
+    def refined_categories(self):
+        return self._refined_categories
 
     def layer(self, ID):
         """Returns the :class:`Layer` object whose ID is given.
@@ -1034,13 +1036,12 @@ class Passage:
         self._layers[layer.ID] = layer
 
     @ModifyPassage
-    def _update_slots_to_layers(self, edge_categories):
-        for c in edge_categories:
-            self._slots_to_layers[c.slot] = c.layer
+    def _update_categories(self, category):
+        self._categories[category.tag] = {"layer": category.layer, "slot": category.slot, "parent": category.parent}
 
     @ModifyPassage
-    def _update_refinement_categories(self, refinement_category):
-        self._refinement_categories.append(refinement_category)
+    def _update_refined_categories(self, refined_category):
+        self._refined_categories.append(refined_category)
 
     @ModifyPassage
     def _add_node(self, node):
