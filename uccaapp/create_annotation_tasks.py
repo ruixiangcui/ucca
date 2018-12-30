@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+import argparse
 import sys
 
-import argparse
 from tqdm import tqdm
 
 from uccaapp.api import ServerAccessor
@@ -14,7 +14,6 @@ class AnnotationTaskCreator(ServerAccessor):
         super().__init__(**kwargs)
 
     def create_tasks(self, filename, log=None, **kwargs):
-        del kwargs
         log_h = open(log, "w", encoding="utf-8") if log else None
         lines = list(self.read_lines(filename))
         for user_id, task_id in tqdm(lines, unit="task", desc="Creating tasks"):
