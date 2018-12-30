@@ -108,17 +108,22 @@ class LazyLoadedPassages:
         return bool(self.files)
 
 
+def resolve_patterns(filename_patterns):
+    for pattern in [filename_patterns] if isinstance(filename_patterns, str) else filename_patterns:
+        yield from sorted(glob(pattern)) or [pattern]
+
+
 def get_passages_with_progress_bar(filename_patterns, desc=None, **kwargs):
-    t = tqdm(get_passages(filename_patterns, **kwargs), desc=desc, unit=" passages")
+    filenames = list(resolve_patterns(filename_patterns))
+    t = tqdm(read_files_and_dirs(filenames, **kwargs), desc=desc, unit=" passages", total=len(filenames))
     for passage in t:
         t.set_postfix(ID=passage.ID)
         yield passage
 
 
 def get_passages(filename_patterns, **kwargs):
-    for pattern in [filename_patterns] if isinstance(filename_patterns, str) else filename_patterns:
-        for filenames in sorted(glob(pattern)) or [pattern]:
-            yield from read_files_and_dirs(filenames, **kwargs)
+    for filenames in resolve_patterns(filename_patterns):
+        yield from read_files_and_dirs(filenames, **kwargs)
 
 
 def gen_files(files_and_dirs):
