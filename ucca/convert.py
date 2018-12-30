@@ -804,6 +804,23 @@ UNCERTAIN = "Uncertain"
 IGNORED_CATEGORIES = {UNANALYZABLE, UNCERTAIN}
 IGNORED_ABBREVIATIONS = {EdgeTags.Unanalyzable,EdgeTags.Uncertain}
 
+
+def get_json_attrib(d):
+    attrib = {}
+    user = d.get("user")
+    if user:
+        user_id = user.get("id")
+        if user_id:
+            attrib["userID"] = user_id
+    remarks = d.get("user_comment")
+    if remarks:
+        attrib["remarks"] = remarks
+    annotation_id = d.get("id")
+    if annotation_id:
+        attrib["annotationID"] = annotation_id
+    return attrib or None
+
+
 def from_json(lines, *args, skip_category_mapping=False, **kwargs):
     """Convert text (or dict) in UCCA-App JSON format to a Passage object.
         According to the API, annotation units are organized in a tree, where the full unit is included as a child of
@@ -822,7 +839,7 @@ def from_json(lines, *args, skip_category_mapping=False, **kwargs):
     d = lines if isinstance(lines, dict) else json.loads("".join(lines))
     all_categories = d["project"]["layer"]["categories"]
 
-    passage = core.Passage(str(d.get("id") or d["manager_comment"]))
+    passage = core.Passage(str(d["passage"]["id"]), attrib=get_json_attrib(d))
     # Create terminals
     l0 = layer0.Layer0(passage)
     token_id_to_terminal = {token["id"]: l0.add_terminal(
