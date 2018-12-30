@@ -16,22 +16,25 @@ class TaskDownloader(ServerAccessor):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def download_tasks(self, task_ids, by_filename=False, **kwargs):
+    def download_tasks(self, task_ids, by_filename=False, log=None, **kwargs):
         if by_filename:
             task_ids_from_file = []
             for filename in task_ids:
                 with open(filename, 'r') as f:
                     task_ids_from_file += list(filter(None, map(str.strip, f)))
             task_ids = task_ids_from_file
+        log_h = open(log, "w", encoding="utf-8") if log else None
         for task_id in tqdm(task_ids, unit=" tasks", desc="Downloading"):
-            yield self.download_task(task_id, **kwargs)
+            yield self.download_task(task_id, log=log_h, **kwargs)
+        if log:
+            log_h.close()
 
-    def download_task(self, task_id, normalize=False, write=True, validate=False, binary=None, out_dir=None,
+    def download_task(self, task_id, normalize=False, write=True, validate=False, binary=None, log=None, out_dir=None,
                       prefix=None, **kwargs):
         del kwargs
-        task_json = self.get_user_task(task_id)
-        user_id = task_json["user"]["id"]
-        passage = from_json(task_json)
+        task = self.get_user_task(task_id)
+        user_id = task["user"]["id"]
+        passage = from_json(task)
         if normalize:
             normalization.normalize(passage)
         if write:
@@ -39,7 +42,10 @@ class TaskDownloader(ServerAccessor):
         if validate:
             for error in validation.validate(passage, linkage=False):
                 with tqdm.external_write_mode():
-                    print(passage.ID, task_id, user_id, task_json["user_comment"], error, sep="\t")
+                    print(passage.ID, task_id, user_id, task["user_comment"], error, sep="\t")
+        if log:
+            print(passage.ID, task_id, user_id, task["user_comment"], task["created_at"], task["updated_at"],
+                  file=log, sep="\t", flush=True)
         return passage, task_id, user_id
 
     @staticmethod
@@ -58,6 +64,7 @@ class TaskDownloader(ServerAccessor):
         argparser.add_argument("-b", "--binary", action="store_true", help="write in binary format (.pickle)")
         argparser.add_argument("-n", "--no-write", action="store_false", dest="write", help="do not write files")
         argparser.add_argument("-N", "--normalize", action="store_true", help="normalize downloaded passages")
+        argparser.add_argument("-l", "--log", help="filename to write log of downloaded passages to")
 
 
 def main(**kwargs):
