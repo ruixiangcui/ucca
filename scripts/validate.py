@@ -1,7 +1,7 @@
 import sys
+from multiprocessing import Pool
 
 import argparse
-from multiprocessing import Pool
 
 from ucca.ioutil import get_passages_with_progress_bar, external_write_mode
 from ucca.normalization import normalize
@@ -20,9 +20,13 @@ class Validator:
         if self.normalization:
             normalize(passage, extra=self.extra)
         errors = list(validate(passage, linkage=self.linkage, multigraph=self.multigraph))
+        passage_id = passage.ID
+        user_id = passage.attrib.get("userID")
+        if user_id:
+            passage_id += " " + user_id
         if self.strict:
-            print_errors(passage.ID, errors)
-        return passage.ID, errors
+            print_errors(passage_id, errors)
+        return passage_id, errors
 
 
 def main(args):
