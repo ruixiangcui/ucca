@@ -172,6 +172,6 @@ class ServerAccessor:
     def submit_annotation_task(self, **kwargs):
         logging.debug("Submitting annotation task: " + json.dumps(kwargs))
         self.request("put", "user_tasks/%d/draft" % kwargs["id"], json=kwargs)
-        ann_user_task_out = self.request("put", "user_tasks/%d/submit" % kwargs["id"]).json()
+        ann_user_task_out = self.request("put", "user_tasks/%d/submit" % kwargs["id"], json=kwargs).json()
         logging.debug("Submitted annotation task: " + json.dumps(ann_user_task_out))
         return ann_user_task_out
