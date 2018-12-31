@@ -7,7 +7,7 @@ from glob import glob
 from requests.exceptions import HTTPError
 
 from ucca.convert import to_json, to_text
-from ucca.ioutil import read_files_and_dirs
+from ucca.ioutil import get_passages_with_progress_bar
 from uccaapp.api import ServerAccessor
 
 try:
@@ -43,10 +43,10 @@ class TaskUploader(ServerAccessor):
                 filenames = sorted(glob(pattern))
                 if not filenames:
                     raise IOError("Not found: " + pattern)
-                for passage in read_files_and_dirs(filenames):
-                    logging.info("Uploading passage %s" % passage.ID)
+                for passage in get_passages_with_progress_bar(filenames, desc="Uploading"):
+                    logging.debug("Uploading passage %s" % passage.ID)
                     task = self.upload_task(passage, log=log_h)
-                    logging.info("Submitted task %d" % task["id"])
+                    logging.debug("Submitted task %d" % task["id"])
                     yield task
         except HTTPError as e:
             try:

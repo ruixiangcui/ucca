@@ -37,7 +37,7 @@ class ConlluPassageUploader(ServerAccessor):
                     try:
                         for line in f:
                             line = line.strip()
-                            m = re.match("^# sent_id = (.*)", line)
+                            m = re.match(r"^# sent_id = (.*)", line)
                             if m:
                                 external_id = m.group(1)
                             elif line:
