@@ -803,9 +803,6 @@ UNANALYZABLE = "Unanalyzable"
 UNCERTAIN = "Uncertain"
 IGNORED_CATEGORIES = {UNANALYZABLE, UNCERTAIN}
 IGNORED_ABBREVIATIONS = {EdgeTags.Unanalyzable,EdgeTags.Uncertain}
-<<<<<<< HEAD
-
-=======
 
 
 def get_json_attrib(d):
