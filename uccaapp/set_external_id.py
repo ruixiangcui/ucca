@@ -20,7 +20,7 @@ class ExternalIdSetter(ServerAccessor):
         for external_id, passage_id in tqdm(passage_id_to_external_id, unit=" passages", desc="Setting external IDs"):
             passage = self.get_passage(passage_id)
             passage["external_id"] = external_id
-            self.update_passage(**passage)
+            yield self.update_passage(**passage)
 
     @staticmethod
     def add_arguments(argparser):
