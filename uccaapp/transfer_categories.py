@@ -38,4 +38,3 @@ if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser(description=desc)
     add_arguments(argument_parser)
     main(argument_parser.parse_args())
-
