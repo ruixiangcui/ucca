@@ -821,7 +821,7 @@ def get_json_attrib(d):
     return attrib or None
 
 
-def from_json(lines, *args, skip_category_mapping=False, **kwargs):
+def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, **kwargs):
     """Convert text (or dict) in UCCA-App JSON format to a Passage object.
         According to the API, annotation units are organized in a tree, where the full unit is included as a child of
           its parent: https://github.com/omriabnd/UCCA-App/blob/master/UCCAApp_REST_API_Reference.pdf
@@ -833,13 +833,19 @@ def from_json(lines, *args, skip_category_mapping=False, **kwargs):
         parent_tree_id: the tree_id of the node's parent, where 0 is the root
     :param lines: iterable of lines in JSON format, describing a single passage.
     :param skip_category_mapping: if False, translate category names to edge tag abbreviations; if True, don't
+    :param by_external_id: set passage ID to be the external ID of the source passage rather than its ID
     :return: generator of Passage objects
     """
     del args, kwargs
     d = lines if isinstance(lines, dict) else json.loads("".join(lines))
     all_categories = d["project"]["layer"]["categories"]
 
-    passage = core.Passage(str(d["passage"]["id"]), attrib=get_json_attrib(d))
+    passage_id = d["passage"]["id"]
+    attrib = get_json_attrib(d)
+    if by_external_id:
+        attrib["passageID"] = passage_id
+        passage_id = d["passage"]["external_id"]
+    passage = core.Passage(str(passage_id), attrib=attrib)
     # Create terminals
     l0 = layer0.Layer0(passage)
     token_id_to_terminal = {token["id"]: l0.add_terminal(

@@ -30,11 +30,11 @@ class TaskDownloader(ServerAccessor):
             log_h.close()
 
     def download_task(self, task_id, normalize=False, write=True, validate=False, binary=None, log=None, out_dir=None,
-                      prefix=None, **kwargs):
+                      prefix=None, by_external_id=False, **kwargs):
         del kwargs
         task = self.get_user_task(task_id)
         user_id = task["user"]["id"]
-        passage = from_json(task)
+        passage = from_json(task, by_external_id=by_external_id)
         if normalize:
             normalization.normalize(passage)
         if write:
@@ -60,6 +60,7 @@ class TaskDownloader(ServerAccessor):
     def add_write_arguments(argparser):
         argparser.add_argument("-o", "--out-dir", default=".", help="output directory")
         argparser.add_argument("-p", "--prefix", default="", help="output filename prefix")
+        argparser.add_argument("-x", "--by-external-id", action="store_true", help="save filename by external ID")
         argparser.add_argument("-V", "--validate", action="store_true", help="run validation on downloaded passages")
         argparser.add_argument("-b", "--binary", action="store_true", help="write in binary format (.pickle)")
         argparser.add_argument("-n", "--no-write", action="store_false", dest="write", help="do not write files")
