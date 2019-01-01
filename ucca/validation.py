@@ -60,7 +60,7 @@ class NodeValidator:
             yield "Reentrant %s terminal (%s) '%s'" % (self.node.tag, join(self.node.incoming), self.node)
 
     def validate_top_level(self):
-        if self.node.ID != "1.1" and self.node.tag != L1Tags.Linkage:
+        if self.node not in self.node.layer.heads and self.node.tag != L1Tags.Linkage:
             yield "Extra root (%s)" % self.node.ID
         terminals = [n for n in self.node.children if n.layer.ID == layer0.LAYER_ID]
         if terminals:
