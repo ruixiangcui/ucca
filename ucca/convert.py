@@ -844,7 +844,9 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
     attrib = get_json_attrib(d)
     if by_external_id:
         attrib["passageID"] = passage_id
-        passage_id = d["passage"]["external_id"] or passage_id
+        external_id = d["passage"]["external_id"]
+        assert external_id, "No external ID found for passage %s (task %s)" % (passage_id, d.get("id", "unknown"))
+        passage_id = external_id
     passage = core.Passage(str(passage_id), attrib=attrib)
     # Create terminals
     l0 = layer0.Layer0(passage)
