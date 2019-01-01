@@ -72,7 +72,8 @@ class NodeValidator:
         s = self.outgoing_tags.difference((ETags.ParallelScene, ETags.Linker, ETags.Function, ETags.Ground,
                                            ETags.Punctuation, ETags.LinkRelation, ETags.LinkArgument))
         if s:
-            yield "Top-level unit (%s) with %s edge" % (self.node_id, join(s))
+            yield "Top-level unit (%s) with %s children: %s" %\
+                  (self.node_id, join(s), join(e.child for e in self.node if e.tag in s))
 
     def validate_non_terminal(self, linkage=False, multigraph=False):
         if linkage and self.node.tag == L1Tags.Linkage:
@@ -81,7 +82,7 @@ class NodeValidator:
             yield from self.validate_foundational()
         primary_incoming = [e for e in self.node.incoming if not e.attrib.get("remote") and e.tag not in LINKAGE]
         if len(primary_incoming) > 1:
-            yield "Unit (%s) with multiple incoming non-remote (%s)" % (self.node_id, join(primary_incoming))
+            yield "Unit (%s) with multiple non-remote parents (%s)" % (self.node_id, join(primary_incoming))
         remote_incoming = [e for e in self.node.incoming if e.attrib.get("remote")]
         if remote_incoming and not primary_incoming:
             yield "Unit (%s) with remote parents but no primary parents" % self.node_id
@@ -95,7 +96,7 @@ class NodeValidator:
                 yield "%s unit (%s) with %s child (%s)" % (self.node.tag, self.node_id, edge.child.tag, edge.child.ID)
         if self.node.attrib.get("implicit"):
             if self.node.outgoing:
-                yield "Implicit unit (%s) with outgoing edges (%s)" % (self.node_id, join(self.node))
+                yield "Implicit unit (%s) with children (%s)" % (self.node_id, join(self.node.children))
         elif self.node.tag in (L1Tags.Foundational, L1Tags.Linkage, L1Tags.Punctuation) and \
                 all(e.attrib.get("remote") for e in self.node):
             yield "Non-implicit unit (%s) with no primary children" % (self.node_id)
@@ -103,15 +104,15 @@ class NodeValidator:
                     ETags.Connector, ETags.Punctuation, ETags.Terminal):
             s = self.incoming.get(tag, ())
             if len(s) > 1:
-                yield "Unit (%s) with multiple incoming %s edges (%s)" % (self.node_id, tag, join(s))
+                yield "Unit (%s) with multiple %s parents (%s)" % (self.node_id, tag, join(e.parent for e in s))
         for tag in (ETags.LinkRelation, ETags.Process, ETags.State):
             s = self.outgoing.get(tag, ())
             if len(s) > 1:
-                yield "Unit (%s) with multiple outgoing %s edges (%s)" % (self.node_id, tag, join(s))
+                yield "Unit (%s) with multiple %s children (%s)" % (self.node_id, tag, join(e.child for e in s))
         if ETags.Function in self.incoming:
             s = self.outgoing_tags.difference((ETags.Terminal, ETags.Punctuation))
             if s:
-                yield "%s unit (%s) with outgoing %s edge: %s" % (ETags.Function, self.node_id, join(s), self.node)
+                yield "%s unit (%s) with %s children: %s" % (ETags.Function, self.node_id, join(s), self.node)
         if ETags.Linker in self.incoming_tags and linkage and ETags.LinkRelation not in self.incoming_tags:
             yield "%s unit (%s) with no incoming %s" % (ETags.Linker, self.node_id, ETags.LinkRelation)
         if not multigraph:
@@ -119,7 +120,7 @@ class NodeValidator:
             for child_id, edges in groupby(sorted(self.node, key=key), key=key):
                 edges = list(edges)
                 if len(edges) > 1:
-                    yield "Multiple %s->%s edges: %s" % (self.node_id, child_id, ", ".join(
+                    yield "Multiple edges from %s to %s: %s" % (self.node_id, child_id, ", ".join(
                         "%d %s" % (len(e), t) for t, e in tag_to_edge(edges).items()))
 
     def validate_linkage(self):
@@ -140,10 +141,12 @@ class NodeValidator:
             s = self.outgoing_tags.difference((ETags.ParallelScene, ETags.Punctuation, ETags.Linker,
                                                ETags.Ground, ETags.Relator, ETags.Function))
             if s:
-                yield "Unit (%s) with parallel scenes has %s edge" % (self.node_id, join(s))
+                yield "Unit (%s) with parallel scenes has %s children: %s" %\
+                      (self.node_id, join(s), join(e.child for e in self.node if e.tag in s))
         s = self.outgoing_tags.intersection(LINKAGE)
         if s:
-            yield "Non-linkage unit (%s) with %s edges" % (self.node_id, join(s))
+            yield "Non-linkage unit (%s) with %s children: %s" %\
+                  (self.node_id, join(s), join(e.child for e in self.node if e.tag in s))
 
 
 def tag_to_edge(edges):
