@@ -479,7 +479,7 @@ class Layer1(core.Layer):
             parent = self._head_fnode
         punct_node = PunctNode(root=self.root, tag=NodeTags.Punctuation,
                                ID=self.next_id())
-        parent.add([core.Category(EdgeTags.Punctuation, slot, layer, "")], punct_node)
+        parent.add([core.Category(self.root, EdgeTags.Punctuation, slot, layer, "")], punct_node)
         punct_node.add([core.Category(EdgeTags.Terminal, slot, layer, "")], terminal)
         return punct_node
 
