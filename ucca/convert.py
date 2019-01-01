@@ -651,8 +651,8 @@ def from_standard(root, extra_funcs=None):
         try:
             return {k: attribute_converters.get(k, str)(v)
                     for k, v in elem.find('attributes').items()}
-        except AttributeError:
-            raise core.UCCAError("Element %s has no attributes" % elem.get("ID"))
+        except AttributeError as e:
+            raise core.UCCAError("Element %s has no attributes" % elem.get("ID")) from e
 
     def _add_extra(obj, elem):
         if elem.find('extra') is not None:
@@ -875,8 +875,8 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
             continue
         try:
             parent_node = tree_id_to_node[parent_tree_id]
-        except KeyError:
-            raise ValueError("Unit %s appears before its parent, %s" % (tree_id, parent_tree_id))
+        except KeyError as e:
+            raise ValueError("Unit %s appears before its parent, %s" % (tree_id, parent_tree_id)) from e
         category_name_to_edge_tag = {} if skip_category_mapping else EdgeTags.__dict__
 
         all_tags = []
@@ -884,10 +884,10 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
         for category in unit["categories"]:
             try:
                 category_name = category.get("name") or category_id_to_name[category["id"]]
-            except TypeError:
-                raise ValueError("Missing category name, and no category list available")
-            except KeyError:
-                raise ValueError("Category missing from layer: " + category["id"])
+            except TypeError as e:
+                raise ValueError("Missing category name, and no category list available") from e
+            except KeyError as e:
+                raise ValueError("Category missing from layer: " + category["id"]) from e
             tag = category_name_to_edge_tag.get(category_name.replace(" ", ""), category_name)
             all_tags.append(tag)
 
@@ -905,8 +905,9 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
             if remote:
                 try:
                     node = tree_id_to_node[cloned_from_tree_id]
-                except KeyError:
-                    raise ValueError("Remote copy %s refers to nonexistent unit: %s" % (tree_id, cloned_from_tree_id))
+                except KeyError as e:
+                    raise ValueError("Remote copy %s refers to nonexistent unit: %s" %
+                                     (tree_id, cloned_from_tree_id)) from e
                 l1.add_remote(parent_node, tag, node)
             elif not skip_category_mapping and terminal and layer0.is_punct(terminal):
                 tree_id_to_node[tree_id] = l1.add_punct(None, terminal)
@@ -1024,8 +1025,8 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
                     try:
                         category["id"] = category_name_to_id[category["name"]]
                         del category["name"]
-                    except KeyError:
-                        raise ValueError("Category missing from layer: " + category["name"])
+                    except KeyError as e:
+                        raise ValueError("Category missing from layer: " + category["name"]) from e
             unit = _create_unit(tree_id_elements, node, terminals, categories, is_remote_copy=remote,
                                 parent_tree_id=parent_annotation_unit["tree_id"])
             if remote:
