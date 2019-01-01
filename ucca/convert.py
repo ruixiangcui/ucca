@@ -990,8 +990,8 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
         def _outgoing(elements, n):  # (ID element, outgoing edges sharing parent & child) for all n's children
             return [(elements + [i], list(es)) for i, (_, es) in enumerate(
                 groupby(sorted([e for e in n if e.tag not in IGNORED_EDGE_TAGS],
-                               key=attrgetter("child.start_position")),
-                        key=lambda e: e.child.ID), start=1)]
+                               key=attrgetter("child.start_position", "child.ID")),
+                        key=attrgetter("child.ID")), start=1)]
 
         def _extra_tag(e):  # categories mentioned in the "remarks" attribute of the "extra" element in the node
             tag = e.child.extra.get("remarks")
@@ -1026,6 +1026,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
                         del category["name"]
                     except KeyError as e:
                         raise ValueError("Category missing from layer: " + category["name"]) from e
+            assert categories, "Non-root unit without categories: %s" % node.ID
             unit = _create_unit(tree_id_elements, node, terminals, categories, is_remote_copy=remote,
                                 parent_tree_id=parent_annotation_unit["tree_id"])
             if remote:
