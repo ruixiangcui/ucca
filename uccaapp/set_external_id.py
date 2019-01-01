@@ -26,7 +26,7 @@ class ExternalIdSetter(ServerAccessor):
 
     @staticmethod
     def add_arguments(argparser):
-        argparser.add_argument("filename", help="file with lines of the form <PASSAGE ID> <EXTERNAL ID>")
+        argparser.add_argument("filename", help="file with lines of the form <EXTERNAL ID> <PASSAGE ID>")
         ServerAccessor.add_arguments(argparser)
 
 
