@@ -879,7 +879,7 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
             raise ValueError("Unit %s appears before its parent, %s" % (tree_id, parent_tree_id)) from e
         category_name_to_edge_tag = {} if skip_category_mapping else EdgeTags.__dict__
 
-        all_tags = []
+        tags = []
 
         for category in unit["categories"]:
             try:
@@ -889,9 +889,12 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
             except KeyError as e:
                 raise ValueError("Category missing from layer: " + category["id"]) from e
             tag = category_name_to_edge_tag.get(category_name.replace(" ", ""), category_name)
-            all_tags.append(tag)
+            tags.append(tag)
 
-        for tag in all_tags:
+        if not tags:
+            raise ValueError("Unit %s has no categories" % tree_id)
+
+        for tag in tags:
             if tag in IGNORED_ABBREVIATIONS:
                 continue
             if unit["type"] == "IMPLICIT":
@@ -915,7 +918,7 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
                 node = tree_id_to_node[tree_id] = l1.add_fnode(parent_node, tag, implicit=(unit["type"] == "IMPLICIT"))
                 node.extra['tree_id'] = tree_id
                 comment = unit.get("comment")
-                node.extra["all_tags"] = ';'.join(all_tags)
+                node.extra["all_tags"] = ';'.join(tags)
                 if comment:
                     node.extra['remarks'] = comment
                 for token in children_tokens:
