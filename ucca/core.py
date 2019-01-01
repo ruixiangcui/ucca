@@ -495,13 +495,11 @@ class Node:
         edge = Edge(root=self._root, parent=self,
                     child=node, attrib=edge_attrib)
         for category in edge_categories:
-            edge.add(category)
-        if len(edge.categories) > 1: # more than one category for this node, refinement exists.
-            for category in edge.categories:
-                if category.tag not in self.root.categories:
-                    self.root._update_categories(category)
-                if category.parent == "" and category.tag not in self.root.refined_categories:
-                    self.root._update_refined_categories(category.tag)
+            c = edge.add(category)
+            if c.tag not in self.root.categories:
+                self.root._update_categories(c)
+            if not c.parent and c.tag not in self.root.refined_categories and len(edge_categories) > 1:
+                self.root._update_refined_categories(c.tag)
         self._outgoing.append(edge)
         self._outgoing.sort(key=self._orderkey)
         node._incoming.append(edge)

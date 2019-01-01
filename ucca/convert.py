@@ -839,14 +839,15 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
     l1 = layer1.Layer1(passage)
     tree_id_to_node = {}
     token_id_to_preterminal = {}
+    # assuming the slots order is defined by the corresponding layers order.
     slot_to_layer = {i+1: categories["layer_name"] for i, categories in enumerate(all_categories)} if all_categories else None
     category_id_to_name = {i+1: {c["id"]: c["name"] for c in categories["categories"]} for i, categories
                            in enumerate(all_categories)} if all_categories else None
     category_id_to_parent = {i + 1: {c["id"]: c["parent"] if "parent" in c.keys() else None
-                                     for c in categories["categories"] }
+                                     for c in categories["categories"]}
                              for i, categories in enumerate(all_categories)} if all_categories else None
-    max_slot = max(slot_to_layer.keys())
-    max_slot_layer = slot_to_layer[max_slot]
+    base_layer = all_categories[-1]["layer_name"]
+    base_layer_slot = [slot for slot, layer in slot_to_layer.items() if layer == base_layer][0]
     # Assuming topological sort: parents always appear before children
     for unit in sorted(d["annotation_units"], key=itemgetter("is_remote_copy")):  # Get non-remotes first
         tree_id = unit["tree_id"]
@@ -897,7 +898,7 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
                 raise ValueError("Remote copy %s refers to nonexistent unit: %s" % (tree_id, cloned_from_tree_id))
             l1.add_remote(parent_node, categories, node)
         elif not skip_category_mapping and terminal and layer0.is_punct(terminal):
-            tree_id_to_node[tree_id] = l1.add_punct(None, terminal, max_slot, max_slot_layer)
+            tree_id_to_node[tree_id] = l1.add_punct(None, terminal, base_layer_slot, base_layer)
         else:
             node = tree_id_to_node[tree_id] = l1.add_fnode(parent_node, categories, implicit=(unit["type"] == "IMPLICIT"))
             for token in children_tokens:
@@ -906,7 +907,7 @@ def from_json(lines, *args, all_categories=None, skip_category_mapping=False, **
     for token_id, node in token_id_to_preterminal.items():
         terminal = token_id_to_terminal[token_id]
         if skip_category_mapping or not layer0.is_punct(terminal):
-            node.add([(EdgeTags.Terminal, max_slot, max_slot_layer, "")], terminal)
+            node.add([(EdgeTags.Terminal, base_layer_slot, base_layer, "")], terminal)
     return passage
 
 

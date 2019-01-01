@@ -463,7 +463,7 @@ class Layer1(core.Layer):
         """
         parent.add(edge_categories, child, edge_attrib={'remote': True})
 
-    def add_punct(self, parent, terminal, layer, slot):
+    def add_punct(self, parent, terminal, layer=None, slot=None):
         """Adds a PunctNode as the child of parent and the Terminal under it.
 
         :param parent: the parent of the newly created PunctNode. If None, adds
