@@ -838,8 +838,6 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
     """
     del args, kwargs
     d = lines if isinstance(lines, dict) else json.loads("".join(lines))
-    all_categories = d["project"]["layer"]["categories"]
-
     passage_id = d["passage"]["id"]
     attrib = get_json_attrib(d)
     if by_external_id:
@@ -848,16 +846,19 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
         assert external_id, "No external ID found for passage %s (task %s)" % (passage_id, d.get("id", "unknown"))
         passage_id = external_id
     passage = core.Passage(str(passage_id), attrib=attrib)
+
     # Create terminals
     l0 = layer0.Layer0(passage)
     token_id_to_terminal = {token["id"]: l0.add_terminal(
         text=token["text"], punct=not token["require_annotation"], paragraph=1)
         for token in sorted(d["tokens"], key=itemgetter("index_in_task"))}
+
     # Create non-terminals
     l1 = layer1.Layer1(passage)
     tree_id_to_node = {}
     token_id_to_preterminal = {}
-    category_id_to_name = {c["id"]: c["name"] for c in all_categories} if all_categories else None
+    category_id_to_name = {c["id"]: c["name"] for c in d["project"]["layer"]["categories"]}
+    category_name_to_edge_tag = {} if skip_category_mapping else EdgeTags.__dict__
     # Assuming topological sort: parents always appear before children
     for unit in sorted(d["annotation_units"], key=itemgetter("is_remote_copy")):  # Get non-remotes first
         tree_id = unit["tree_id"]
@@ -877,15 +878,11 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
             parent_node = tree_id_to_node[parent_tree_id]
         except KeyError as e:
             raise ValueError("Unit %s appears before its parent, %s" % (tree_id, parent_tree_id)) from e
-        category_name_to_edge_tag = {} if skip_category_mapping else EdgeTags.__dict__
 
         tags = []
-
-        for category in unit["categories"]:
+        for category in unit.get("categories", ()):
             try:
                 category_name = category.get("name") or category_id_to_name[category["id"]]
-            except TypeError as e:
-                raise ValueError("Missing category name, and no category list available") from e
             except KeyError as e:
                 raise ValueError("Category missing from layer: " + category["id"]) from e
             tag = category_name_to_edge_tag.get(category_name.replace(" ", ""), category_name)
@@ -897,10 +894,7 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
         for tag in tags:
             if tag in IGNORED_ABBREVIATIONS:
                 continue
-            if unit["type"] == "IMPLICIT":
-                children_tokens = []
-            else:
-                children_tokens = unit["children_tokens"]
+            children_tokens = [] if unit["type"] == "IMPLICIT" else unit["children_tokens"]
             try:
                 terminal = token_id_to_terminal[children_tokens[0]["id"]] if len(children_tokens) == 1 else None
             except (IndexError, KeyError):
@@ -924,11 +918,13 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
                 for token in children_tokens:
                     token_id_to_preterminal[token["id"]] = node
             # currently only supports one non-ignored category, TODO: fix it
+
     # Attach terminals to non-terminals
     for token_id, node in token_id_to_preterminal.items():
         terminal = token_id_to_terminal[token_id]
         if skip_category_mapping or not layer0.is_punct(terminal):
             node.add(EdgeTags.Terminal, terminal)
+
     return passage
 
 
