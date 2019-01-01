@@ -2,6 +2,7 @@
 import sys
 
 import argparse
+import json
 from tqdm import tqdm
 
 from ucca import normalization, validation
@@ -37,7 +38,10 @@ class TaskDownloader(ServerAccessor):
         del kwargs
         task = self.get_user_task(task_id)
         user_id = task["user"]["id"]
-        passage = from_json(task, by_external_id=by_external_id)
+        try:
+            passage = from_json(task, by_external_id=by_external_id)
+        except ValueError as e:
+            raise ValueError("Failed reading json for task %s:\n%s" % (task_id, json.dumps(task))) from e
         if normalize:
             normalization.normalize(passage)
         if write:
