@@ -480,7 +480,7 @@ class Layer1(core.Layer):
         punct_node = PunctNode(root=self.root, tag=NodeTags.Punctuation,
                                ID=self.next_id())
         parent.add([(EdgeTags.Punctuation, slot, layer, "")], punct_node)
-        punct_node.add([core.Category(EdgeTags.Terminal, slot, layer, "")], terminal)
+        punct_node.add([(EdgeTags.Terminal, slot, layer, "")], terminal)
         return punct_node
 
     def add_linkage(self, relation, layer, slot, *args):
