@@ -972,7 +972,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
 
         def _outgoing(elements, n):  # (ID element, outgoing edges sharing parent & child) for all n's children
             return [(elements + [i], list(es)) for i, (_, es) in enumerate(
-                groupby(sorted([e for e in n if e.tag not in IGNORED_EDGE_TAGS],
+                groupby(sorted([e for e in n if e.categories[0].tag not in IGNORED_EDGE_TAGS],
                                key=attrgetter("child.start_position")),
                         key=lambda e: e.child.ID), start=1)]
 
@@ -992,7 +992,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
             node = edge.child
             remote = edge.attrib.get("remote", False)
             parent_annotation_unit = node_id_to_primary_annotation_unit[edge.parent.ID]
-            tags = [e.tag for e in edges] + \
+            tags = [e.categories[0].tag for e in edges] + \
                 list(filter(None, (_extra_tag(e) for e in edges if not e.attrib.get("remote"))))
             categories = [dict(name=edge_tag_to_category_name.get(t, t), slot=1) for t in tags]
             terminals = node.get_terminals()
@@ -1228,20 +1228,21 @@ def _copy_l1_nodes(passage, other, id_to_other, include=None, remarks=False):
                     other_child = other_l1.add_punct(other_node, id_to_other[grandchild.ID])
                     other_child.incoming[0].tag = edge.tag
                 else:
-                    other_child = other_l1.add_fnode(other_node, edge.tag, implicit=edge.child.attrib.get("implicit"))
+                    other_child = other_l1.add_fnode(other_node, edge.categories, implicit=edge.child.attrib.get("implicit"))
                     queue.append((edge.child, other_child))
                 id_to_other[edge.child.ID] = other_child
                 _copy_extra(edge.child, other_child, remarks)  # Add remotes
             elif is_remote:  # Cross-paragraph remote edge -> create implicit child instead
-                other_l1.add_fnode(other_node, edge.tag, implicit=True)
+                other_l1.add_fnode(other_node, edge.categories, implicit=True)
     for edge, parent in remotes:
         other_child = id_to_other.get(edge.child.ID)
+        edge_categories = [(c.tag, c.slot, c.layer, c.parent) for c in edge.categories]
         if other_child is None:  # Promote remote edge to primary if the original primary parent is gone due to split
             id_to_other[edge.child.ID] = other_child = \
-                other_l1.add_fnode(parent, edge.tag, implicit=edge.child.attrib.get("implicit"))
+                other_l1.add_fnode(parent, edge_categories, implicit=edge.child.attrib.get("implicit"))
             _copy_extra(edge.child, other_child, remarks)
         else:
-            other_l1.add_remote(parent, edge.tag, other_child)
+            other_l1.add_remote(parent, edge_categories, other_child)
     # Add linkages
     for linkage in linkages:
         try:

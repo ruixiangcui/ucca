@@ -330,11 +330,11 @@ class FoundationalNode(core.Node):
         output = ''
         for i, edge in enumerate(sorted_edges):
             node = edge.child
-            if edge.tag == EdgeTags.Terminal:
+            if edge.categories[0].tag == EdgeTags.Terminal:
                 space = ' ' if not end(node) == self.end_position else ''
                 output += '{}{}'.format(str(node), space)
             else:
-                edge_tag = edge.tag
+                edge_tag = edge.categories[0].tag
                 if edge.attrib.get('remote'):
                     edge_tag += '*'
                 if edge.attrib.get('uncertain'):
@@ -498,9 +498,9 @@ class Layer1(core.Layer):
         """
         linkage = Linkage(root=self.root, tag=NodeTags.Linkage,
                           ID=self.next_id())
-        linkage.add([core.Category(EdgeTags.LinkRelation, slot, layer, "")], relation)
+        linkage.add([(EdgeTags.LinkRelation, slot, layer, "")], relation)
         for arg in args:
-            linkage.add([core.Category(EdgeTags.LinkArgument, slot, layer, "")], arg)
+            linkage.add([(EdgeTags.LinkArgument, slot, layer, "")], arg)
         return linkage
 
     def _check_top_scene(self, node):

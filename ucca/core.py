@@ -193,24 +193,12 @@ class Category:
     information.
     """
 
-    def __init__(self, root, tag, slot, layer, parent=None, attrib=None):
-        if root.frozen:
-            raise FrozenPassageError(root.ID)
-        self._root = root
+    def __init__(self, tag, slot=None, layer=None, parent=None, attrib=None):
         self._tag = tag
         self._slot = slot
         self._layer = layer
         self._parent = parent
-        self._attrib = _AttributeDict(root, attrib)
         self.extra = {}
-
-    @property
-    def root(self):
-        return self._root
-
-    @property
-    def attrib(self):
-        return self._attrib
 
     @property
     def tag(self):
@@ -304,6 +292,11 @@ class Edge:
     def categories(self):
         return self._categories
 
+    @categories.setter
+    def categories(self, new_categories):
+        for category in new_categories:
+            self.add(category.tag, category.slot, category.layer, category.parent)
+
     @property
     def child(self):
         return self._child
@@ -343,9 +336,9 @@ class Edge:
                                   ignore_node=ignore_node, ignore_edge=ignore_edge))
 
     @ModifyPassage
-    def add(self, category):
+    def add(self, tag, slot, layer, parent):
         """ adds a new category to the edge"""
-        c = Category(self.root, category[0], category[1], category[2], category[3])
+        c = Category(tag, slot, layer, parent)
         self._categories.append(c)
         return c
 
@@ -495,7 +488,7 @@ class Node:
         edge = Edge(root=self._root, parent=self,
                     child=node, attrib=edge_attrib)
         for category in edge_categories:
-            c = edge.add(category)
+            c = edge.add(*category)
             if c.tag not in self.root.categories:
                 self.root._update_categories(c)
             if not c.parent and c.tag not in self.root.refined_categories and len(edge_categories) > 1:

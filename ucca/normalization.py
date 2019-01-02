@@ -39,20 +39,20 @@ def destroy(node_or_edge):
     return parent
 
 
-def copy_edge(edge, parent=None, child=None, tag=None, attrib=None):
+def copy_edge(edge, parent=None, child=None, categories=None, attrib=None):
     if parent is None:
         parent = edge.parent
     if child is None:
         child = edge.child
-    if tag is None:
-        tag = edge.tag
+    if not categories:
+        categories = [(c.tag, c.slot, c.layer, c.parent) for c in edge.categories]
     if attrib is None:
         attrib = edge.attrib
     if parent in child.iter():
         # raise ValueError("Created cycle (%s->%s) when trying to normalize '%s'" % (
         #     "->".join(n.ID for n in child.iter() if parent in n.iter()), child.ID, parent))
         return False
-    parent.add(tag, child, edge_attrib=attrib)
+    parent.add(categories, child, edge_attrib=attrib)
     return True
 
 
@@ -108,7 +108,7 @@ def move_sub_scene_elements(node):
 def separate_scenes(node, l1, top_level=False):
     if (node.is_scene() or node.participants) and (top_level or node.parallel_scenes):
         edges = list(node)
-        scene = l1.add_fnode(node, ETags.ParallelScene)
+        scene = l1.add_fnode(node, [(ETags.ParallelScene)])
         for edge in edges:
             if edge.tag not in (ETags.ParallelScene, ETags.Punctuation, ETags.Linker, ETags.Ground):
                 if copy_edge(edge, parent=scene):
@@ -164,7 +164,7 @@ def reattach_terminals(l0, l1):
     for terminal in l0.all:
         for edge in terminal.incoming:
             if any(e.tag != ETags.Terminal for e in edge.parent):
-                node = l1.add_fnode(edge.parent, layer1.EdgeTags.Center)
+                node = l1.add_fnode(edge.parent, [(layer1.EdgeTags.Center)])
                 if copy_edge(edge, parent=node):
                     remove(edge.parent, edge)
 
@@ -172,7 +172,7 @@ def reattach_terminals(l0, l1):
 def attach_terminals(l0, l1):
     for terminal in l0.all:
         if not terminal.incoming:
-            node = l1.add_fnode(nearest_parent(l0, terminal), layer1.EdgeTags.Function)
+            node = l1.add_fnode(nearest_parent(l0, terminal), [(layer1.EdgeTags.Function)])
             node.add(layer1.EdgeTags.Terminal, terminal)
 
 

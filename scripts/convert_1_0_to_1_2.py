@@ -20,10 +20,10 @@ def is_main_relation(node):
     return node is not None and node.ftag in {layer1.EdgeTags.Process, layer1.EdgeTags.State}
 
 
-def move_node(node, new_parent, tag=None):
+def move_node(node, new_parent, categories=None):
     for edge in node.incoming:
         if edge.parent == fparent(edge):
-            copy_edge(edge, parent=new_parent, tag=tag)
+            copy_edge(edge, parent=new_parent, categories=categories)
             remove(edge.parent, edge)
             break
     # for (parent_id, child_id), count in Counter((edge.parent.ID, edge.child.ID) for edge in new_parent).items():
@@ -39,7 +39,7 @@ def extract_aux(terminal, parent, grandparent):
             parent.ftag == layer1.EdgeTags.Function or
             parent.ftag in {layer1.EdgeTags.Elaborator, layer1.EdgeTags.Relator} and
             get_annotation(terminal, Attr.DEP) in {"aux", "auxpass"}):
-        move_node(parent, fparent(grandparent), tag=layer1.EdgeTags.Function)
+        move_node(parent, fparent(grandparent), categories=[(layer1.EdgeTags.Function)])
         return True
     return False
 
@@ -52,7 +52,7 @@ def set_light_verb_function(terminal, parent, grandparent):
             is_main_relation(grandparent) and parent.ftag == layer1.EdgeTags.Elaborator:
         if len(grandparent.centers) != 1 or len(grandparent.centers[0].get_terminals()) != 1 or \
                 get_annotation(grandparent.centers[0].get_terminals()[0], Attr.DEP) != "ccomp":
-            move_node(parent, grandparent, tag=layer1.EdgeTags.Function)
+            move_node(parent, grandparent, categories=[(layer1.EdgeTags.Function)])
             return True
     return False
 
@@ -65,7 +65,7 @@ def extract_modal(terminal, parent, grandparent):
         get_annotation(terminal, Attr.POS) in {"VERB", "ADV"} and
         get_annotation(terminal, Attr.DEP) not in {"aux", "auxpass"}) and \
             is_main_relation(grandparent) and parent.ftag == layer1.EdgeTags.Elaborator:
-        move_node(parent, fparent(grandparent), tag=layer1.EdgeTags.Adverbial)
+        move_node(parent, fparent(grandparent), categories=[(layer1.EdgeTags.Adverbial)])
         return True
     return False
 
@@ -92,7 +92,7 @@ def extract_that(terminal, parent, grandparent):
                     node.ftag == layer1.EdgeTags.ParallelScene:
                 following_scene = node
         if following_scene is not None:
-            move_node(parent, following_scene, tag=layer1.EdgeTags.Relator)
+            move_node(parent, following_scene, categories=[(layer1.EdgeTags.Relator)])
             return True
     return False
 
@@ -103,7 +103,7 @@ GROUND = {"seem", "feel", "sound", "taste", "look", "smell"}
 def extract_ground(terminal, parent, grandparent):
     if get_annotation(terminal, Attr.LEMMA) in GROUND:
         if is_main_relation(grandparent) and parent.ftag == layer1.EdgeTags.Elaborator:
-            move_node(parent, fparent(grandparent), tag=layer1.EdgeTags.Ground)
+            move_node(parent, fparent(grandparent), categories=[(layer1.EdgeTags.Ground)])
             return True
     return False
 
@@ -122,7 +122,7 @@ def fix_punct(terminal, parent, grandparent):
 def fix_root_terminal_child(terminal, parent, grandparent):
     del grandparent
     if not parent.incoming:
-        f1 = parent.root.layer(layer1.LAYER_ID).add_fnode(parent, layer1.EdgeTags.Function)
+        f1 = parent.root.layer(layer1.LAYER_ID).add_fnode(parent, [(layer1.EdgeTags.Function)])
         move_node(terminal, f1)
         return True
     return False
@@ -131,7 +131,7 @@ def fix_root_terminal_child(terminal, parent, grandparent):
 def fix_unary_participant(terminal, parent, grandparent):
     del terminal, parent
     while grandparent.incoming:
-        if len(grandparent.outgoing) == 1 and grandparent.outgoing[0].tag == layer1.EdgeTags.Participant:
+        if len(grandparent.outgoing) == 1 and grandparent.outgoing[0].categories[0].tag == layer1.EdgeTags.Participant:
             for edge in grandparent.incoming:
                 copy_edge(edge, child=grandparent.children[0])
             destroy(grandparent)
