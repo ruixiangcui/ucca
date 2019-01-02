@@ -972,7 +972,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
 
         def _outgoing(elements, n):  # (ID element, outgoing edges sharing parent & child) for all n's children
             return [(elements + [i], list(es)) for i, (_, es) in enumerate(
-                groupby(sorted([e for e in n if e.categories[0].tag not in IGNORED_EDGE_TAGS],
+                groupby(sorted([e for e in n if e.tag not in IGNORED_EDGE_TAGS],
                                key=attrgetter("child.start_position")),
                         key=lambda e: e.child.ID), start=1)]
 
@@ -992,7 +992,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
             node = edge.child
             remote = edge.attrib.get("remote", False)
             parent_annotation_unit = node_id_to_primary_annotation_unit[edge.parent.ID]
-            tags = [e.categories[0].tag for e in edges] + \
+            tags = [e.tag for e in edges] + \
                 list(filter(None, (_extra_tag(e) for e in edges if not e.attrib.get("remote"))))
             categories = [dict(name=edge_tag_to_category_name.get(t, t), slot=1) for t in tags]
             terminals = node.get_terminals()

@@ -330,11 +330,11 @@ class FoundationalNode(core.Node):
         output = ''
         for i, edge in enumerate(sorted_edges):
             node = edge.child
-            if edge.categories[0].tag == EdgeTags.Terminal:
+            if edge.tag == EdgeTags.Terminal:
                 space = ' ' if not end(node) == self.end_position else ''
                 output += '{}{}'.format(str(node), space)
             else:
-                edge_tag = edge.categories[0].tag
+                edge_tag = edge.tag
                 if edge.attrib.get('remote'):
                     edge_tag += '*'
                 if edge.attrib.get('uncertain'):
