@@ -34,7 +34,7 @@ class TaskDownloader(ServerAccessor):
             log_h.close()
 
     def download_task(self, task_id, normalize=False, write=True, validate=None, binary=None, log=None, out_dir=None,
-                      prefix=None, by_external_id=False, **kwargs):
+                      prefix=None, by_external_id=False, verbose=False, **kwargs):
         del kwargs
         task = self.get_user_task(task_id)
         user_id = task["user"]["id"]
@@ -45,7 +45,7 @@ class TaskDownloader(ServerAccessor):
         if normalize:
             normalization.normalize(passage)
         if write:
-            write_passage(passage, binary=binary, outdir=out_dir, prefix=prefix)
+            write_passage(passage, binary=binary, outdir=out_dir, prefix=prefix, verbose=verbose)
         if validate:
             for error in validation.validate(passage, linkage=False):
                 print(passage.ID, task_id, user_id, error, file=validate, sep="\t", flush=True)
@@ -60,6 +60,9 @@ class TaskDownloader(ServerAccessor):
         argparser.add_argument("-f", "--by-filename", action="store_true",
                                help="if true, task_ids is a filename, if false, it is a list of IDs")
         TaskDownloader.add_write_arguments(argparser)
+        argparser.add_argument("-V", "--validate", help="run validation on downloaded passages and save errors to file")
+        argparser.add_argument("-N", "--normalize", action="store_true", help="normalize downloaded passages")
+        argparser.add_argument("-l", "--log", help="filename to write log of downloaded passages to")
         ServerAccessor.add_arguments(argparser)
 
     @staticmethod
@@ -67,11 +70,8 @@ class TaskDownloader(ServerAccessor):
         argparser.add_argument("-o", "--out-dir", default=".", help="output directory")
         argparser.add_argument("-p", "--prefix", default="", help="output filename prefix")
         argparser.add_argument("-x", "--by-external-id", action="store_true", help="save filename by external ID")
-        argparser.add_argument("-V", "--validate", help="run validation on downloaded passages and save errors to file")
         argparser.add_argument("-b", "--binary", action="store_true", help="write in binary format (.pickle)")
         argparser.add_argument("-n", "--no-write", action="store_false", dest="write", help="do not write files")
-        argparser.add_argument("-N", "--normalize", action="store_true", help="normalize downloaded passages")
-        argparser.add_argument("-l", "--log", help="filename to write log of downloaded passages to")
 
 
 def main(**kwargs):
