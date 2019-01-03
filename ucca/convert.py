@@ -1152,12 +1152,13 @@ def split_passage(passage, ends, remarks=False, ids=None, suffix_format="%03d", 
         level = set()
         nodes = set()
         id_to_other = {}
-        paragraphs = set()
+        paragraphs = []
         for terminal in l0.all[start:end]:
             other_terminal = other_l0.add_terminal(terminal.text, terminal.punct, 1)
             _copy_extra(terminal, other_terminal, remarks)
             other_terminal.extra["orig_paragraph"] = terminal.paragraph
-            paragraphs.add(terminal.paragraph)
+            if terminal.paragraph not in paragraphs:
+                paragraphs.append(terminal.paragraph)
             id_to_other[terminal.ID] = other_terminal
             level.update(terminal.parents)
             nodes.add(terminal)
