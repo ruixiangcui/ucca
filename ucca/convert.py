@@ -1168,7 +1168,7 @@ def split_passage(passage, ends, remarks=False, ids=None, suffix_format="%03d", 
                         e.tag != layer1.EdgeTags.Punctuation and e.parent not in nodes)
 
         other_l1 = layer1.Layer1(root=other, attrib=passage.layer(layer1.LAYER_ID).attrib.copy())
-        _copy_l1_nodes(passage, other, id_to_other, nodes, remarks=remarks)
+        _copy_l1_nodes(passage, other, id_to_other, set(nodes), remarks=remarks)
         attach_punct(other_l0, other_l1)
         for j, paragraph in enumerate(paragraphs, start=1):
             other_l0.doc(j)[:] = l0.doc(paragraph)
@@ -1232,7 +1232,7 @@ def _copy_l1_nodes(passage, other, id_to_other, include=None, remarks=False):
     while queue:
         node, other_node = queue.pop()
         if node.tag == layer1.NodeTags.Linkage:
-            if include is None or set(include).issuperset(node.children):
+            if include is None or include.issuperset(node.children):
                 linkages.append(node)
             continue
         if other_node is None:
