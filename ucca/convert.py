@@ -1128,7 +1128,7 @@ def split2segments(passage, is_sentences, remarks=False, lang="en", ids=None):
     return split_passage(passage, ends, remarks=remarks, ids=ids)
 
 
-def split_passage(passage, ends, remarks=False, ids=None, suffix_format="%03d"):
+def split_passage(passage, ends, remarks=False, ids=None, suffix_format="%03d", suffix_start=0):
     """
     Split the passage on the given terminal positions
     :param passage: passage to split
@@ -1136,10 +1136,11 @@ def split_passage(passage, ends, remarks=False, ids=None, suffix_format="%03d"):
     :param remarks: add original node ID as remarks to the new nodes
     :param ids: optional iterable of ids, the same length as ends, to set passage IDs for each split
     :param suffix_format: in case ids is None, use this format for the running index suffix
+    :param suffix_start: in case ids is None, use this starting index for the running index suffix
     :return: sequence of passages
     """
     passages = []
-    for i, (start, end, index) in enumerate(zip([0] + ends[:-1], ends, ids or repeat(None))):
+    for i, (start, end, index) in enumerate(zip([0] + ends[:-1], ends, ids or repeat(None)), start=suffix_start):
         if start == end:
             continue
         other = core.Passage(ID=index or ("%s" + suffix_format) % (passage.ID, i), attrib=passage.attrib.copy())
