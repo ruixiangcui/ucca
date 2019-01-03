@@ -15,19 +15,20 @@ desc = """Parses XML files in UCCA standard format, and writes a passage per sen
 
 
 class Splitter:
-    def __init__(self, sentences, enum=False):
+    def __init__(self, sentences, enum=False, suffix_format=None):
         self.sentences = sentences
         self.sentence_to_index = dict(map(reversed, enumerate(sentences)))
         self.enumerate = enum
+        self.suffix_format = suffix_format
         self.index = 0
 
     @classmethod
-    def read_file(cls, filename, enum=False):
+    def read_file(cls, filename, **kwargs):
         if filename is None:
             return None
         with open(filename, encoding="utf-8") as f:
             sentences = [l.strip() for l in f]
-        return cls(sentences, enum=enum)
+        return cls(sentences, **kwargs)
 
     def split(self, passage):
         ends = []
@@ -48,11 +49,11 @@ class Splitter:
                 ids.append(str(index))
                 tokens = []
                 self.index += 1
-        return split_passage(passage, ends, ids=ids if self.enumerate else None)
+        return split_passage(passage, ends, ids=ids if self.enumerate else None, suffix_format=self.suffix_format)
 
 
 def main(args):
-    splitter = Splitter.read_file(args.sentences, enum=args.enumerate)
+    splitter = Splitter.read_file(args.sentences, enum=args.enumerate, suffix_format=args.suffix_format)
     os.makedirs(args.outdir, exist_ok=True)
     i = 0
     for passage in get_passages_with_progress_bar(args.filenames, "Splitting"):
@@ -72,6 +73,7 @@ if __name__ == "__main__":
     argparser.add_argument("filenames", nargs="+", help="passage file names to convert")
     argparser.add_argument("-o", "--outdir", default=".", help="output directory")
     argparser.add_argument("-p", "--prefix", default="", help="output filename prefix")
+    argparser.add_argument("-f", "--suffix-format", default="%03d", help="sentence number suffix format")
     argparser.add_argument("-r", "--remarks", action="store_true", help="annotate original IDs")
     argparser.add_argument("-l", "--lang", default="en", help="language two-letter code for sentence model")
     argparser.add_argument("-b", "--binary", action="store_true", help="write in pickle binary format (.pickle)")
