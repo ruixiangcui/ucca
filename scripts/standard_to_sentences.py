@@ -64,8 +64,9 @@ def main(args):
                 passage, remarks=args.remarks, lang=args.lang, ids=map(str, count(i)) if args.enumerate else None):
             i += 1
             outfile = os.path.join(args.outdir, args.prefix + sentence.ID + (".pickle" if args.binary else ".xml"))
-            with external_write_mode():
-                print("Writing passage file for sentence '%s'..." % outfile, file=sys.stderr)
+            if args.verbose:
+                with external_write_mode():
+                    print("Writing passage file for sentence '%s'..." % outfile, file=sys.stderr)
             if args.normalize:
                 normalize(sentence)
             passage2file(sentence, outfile, binary=args.binary)
@@ -85,4 +86,5 @@ if __name__ == "__main__":
     argparser.add_argument("-e", "--enumerate", action="store_true", help="set each output sentence ID by global order")
     argparser.add_argument("-N", "--no-normalize", dest="normalize", action="store_false",
                            help="do not normalize passages after splitting")
+    argparser.add_argument("-v", "--verbose", action="store_true", help="print information about every split sentence")
     main(argparser.parse_args())
