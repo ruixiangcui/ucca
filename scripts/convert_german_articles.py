@@ -14,7 +14,7 @@ ARTICLES = (
 
 
 def change_article_to_function(terminal, parent):
-    if terminal.text in ARTICLES and parent.ftag == layer1.EdgeTags.Elaborator:
+    if terminal.text.lower() in ARTICLES and parent.ftag == layer1.EdgeTags.Elaborator:
         parent.incoming[0].tag = layer1.EdgeTags.Function
         return True
 
