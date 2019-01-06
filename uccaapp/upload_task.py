@@ -72,7 +72,8 @@ class TaskUploader(ServerAccessor):
             to_json(passage, return_dict=True, tok_task=tok_user_task_out, all_categories=self.layer["categories"]))
         ann_user_task_out = self.submit_annotation_task(**ann_user_task_in)
         if log:
-            print(passage.ID, passage_out["id"], tok_task_out["id"], ann_user_task_out["id"], file=log, sep="\t")
+            print(passage.ID, passage_out["id"], tok_task_out["id"], ann_user_task_out["id"],
+                  file=log, sep="\t", flush=True)
         return ann_user_task_out
 
     @staticmethod
