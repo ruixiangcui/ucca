@@ -62,11 +62,11 @@ def create_unit_element(state, text, tag):
     preterminal_elem = Element(SiteCfg.Tags.Unit,
                                {SiteCfg.Attr.SiteID: state.get_id()})
     preterminal_parent = Element(SiteCfg.Tags.Unit,
-                                  {
-                                    SiteCfg.Attr.ElemTag: tag,
-                                    SiteCfg.Attr.SiteID: state.get_id(),
-                                    SiteCfg.Attr.Unanalyzable: SiteCfg.FALSE,
-                                    SiteCfg.Attr.Uncertain: SiteCfg.FALSE})
+                                 {
+                                     SiteCfg.Attr.ElemTag: tag,
+                                     SiteCfg.Attr.SiteID: state.get_id(),
+                                     SiteCfg.Attr.Unanalyzable: SiteCfg.FALSE,
+                                     SiteCfg.Attr.Uncertain: SiteCfg.FALSE})
     preterminal_elem.append(elem)
     preterminal_parent.append(preterminal_elem)
     return preterminal_parent
@@ -179,7 +179,8 @@ START_CLITICS = {"l'", "qu'", "n'", "d'", "s'", "m'", "c'", "t'", "jusqu'", "j'"
 def insert_spaces(tokens):
     for token, next_token in zip(tokens[:-1], tokens[1:]):
         yield token
-        if token.lower() not in START_CLITICS and next_token.lower() not in END_CLITICS:
+        if token.lower() not in START_CLITICS and next_token.lower() not in END_CLITICS\
+                and not (token == next_token == "'"):
             yield " "
     if tokens:
         yield tokens[-1]
@@ -188,7 +189,7 @@ def insert_spaces(tokens):
 # ------------------------- split cases ----------------------------
 
 def split_possessive_s_unanalyzable(i, terminals, preterminals,
-                       preterminal_parents, state):
+                                    preterminal_parents, state):
     """split possessive s as unanalyzable. xxx's -> xxx 's.
     use when the original token is unanalyzable."""
     without = terminals[i].text.strip("'s")
@@ -201,20 +202,20 @@ def split_possessive_s_unanalyzable(i, terminals, preterminals,
 
 
 def split_apostrophe_unanalyzable(i, terminals, preterminals,
-                       preterminal_parents, state):
+                                  preterminal_parents, state):
     """Split apostrophe as unanalyzable. x'xxx -> x' xxx.
     use when the original token is unanalyzable."""
     split_list = terminals[i].text.split("'")
     index_to_insert = preterminal_parents[
         i].getchildren().index(preterminals[i])
     preterminal_parents[i].insert(index_to_insert,
-                                  create_token_element(state, split_list[0]+"'",
+                                  create_token_element(state, split_list[0] + "'",
                                                        is_punct=False))
     terminals[i].text = split_list[1]
 
 
 def split_hyphen_unanalyzable(i, terminals, preterminals,
-                             preterminal_parents, state):
+                              preterminal_parents, state):
     """split token with hyphens to unanalyzable tokens. xxx-xxx-xx ->
     xxx - xxx - xx"""
     divided = terminals[i].text.split("-")
@@ -244,7 +245,7 @@ def split_apostrophe_to_units(i, terminals, preterminals, preterminal_parents,
                                   create_unit_element(state, divided[1],
                                                       tag2))
     preterminal_parents[i].insert(index_to_insert,
-                                  create_unit_element(state, divided[0]+"'",
+                                  create_unit_element(state, divided[0] + "'",
                                                       tag1))
     preterminal_parents[i].remove(preterminals[i])
 
@@ -281,6 +282,7 @@ def split_possessive_s_to_units(i, terminals, preterminals,
                                                       first_type))
     preterminal_parents[i].remove(preterminals[i])
 
+
 # --------------------------------------------------------------------
 
 
@@ -298,7 +300,7 @@ def handle_words_set(rule, i, terminals, preterminals, preterminal_parents,
     """use set of words to determine the right fix needed"""
     if rule == HYPHEN_TO_UNANALYZABLE:
         split_hyphen_unanalyzable(i, terminals, preterminals,
-                                 preterminal_parents, state)
+                                  preterminal_parents, state)
         return True
     if rule == POSSESSIVE_S_TO_UNANALAYZABLE:
         split_possessive_s_unanalyzable(i, terminals, preterminals,
@@ -306,7 +308,7 @@ def handle_words_set(rule, i, terminals, preterminals, preterminal_parents,
         return True
     if rule == APOSTROPHE_TO_UNANALAYZABLE:
         split_apostrophe_unanalyzable(i, terminals, preterminals,
-                                         preterminal_parents, state)
+                                      preterminal_parents, state)
         return True
     if preterminal_parents[i].get(SiteCfg.Attr.Unanalyzable) == SiteCfg.TRUE:
         return False  # if token is unanalyzable, do nothing of the next steps.
@@ -333,7 +335,7 @@ def handle_words_set(rule, i, terminals, preterminals, preterminal_parents,
 
 
 def retokenize(i, start, end, terminals, preterminals, preterminal_parents,
-             passage_id, tokenizer, state, cw, words):
+               passage_id, tokenizer, state, cw, words):
     start_offset = 0 if start == 0 else 1
     end_offset = 0 if end == len(terminals) else 1
     old_context = [s for t in terminals[start - start_offset:end + end_offset]
@@ -348,8 +350,6 @@ def retokenize(i, start, end, terminals, preterminals, preterminal_parents,
                                end_offset)
     if not new_tokens or old_tokens == new_tokens:
         return False
-    fixed = False
-    to_write = "Unhandled"
     non_punct_indices = false_indices(map(is_punct, new_tokens))
     if words is not None and terminals[i].text in words:
         if handle_words_set(words[terminals[i].text], i, terminals, preterminals,
@@ -362,8 +362,8 @@ def retokenize(i, start, end, terminals, preterminals, preterminal_parents,
         without = terminals[i].text.split("-")
         if all(word[0].isupper() and word.isalnum() for word in without):
             split_hyphen_unanalyzable(i, terminals,
-                                     preterminals, preterminal_parents,
-                                     state)
+                                      preterminals, preterminal_parents,
+                                      state)
             fixed = True
             to_write = "Fixed - Names"
     elif len(non_punct_indices) == 1:  # Only one token in the sequence is not punctuation
@@ -375,7 +375,7 @@ def retokenize(i, start, end, terminals, preterminals, preterminal_parents,
         index_in_preterminal_parent = preterminal_parents[
             i].getchildren().index(preterminals[i])
         if insert_retokenized_currency(i, terminals, preterminals,
-                                            preterminal_parents, new_tokens, state):
+                                       preterminal_parents, new_tokens, state):
             to_write = "Fixed - currency"
         else:
             for j in list(range(start, i)) + list(
@@ -463,7 +463,7 @@ if __name__ == "__main__":
     argparser.add_argument("-p", "--prefix", default="", help="output filename prefix")
     argparser.add_argument("-b", "--binary", action="store_true", help="write in pickle binary format (.pickle)")
     argparser.add_argument("-v", "--verbose", action="store_true", help="verbose output")
-    argparser.add_argument("-s", "--words-set", default=None, help= "filename to read the set of words from. "
-                           "each section starts with headline of the fix required (watch set format), "
-                           "followed by the words to fix. sections are separated by ---- line.")
+    argparser.add_argument("-s", "--words-set", default=None, help="filename to read the set of words from. "
+                                                                   "each section starts with headline of the fix required (watch set format), "
+                                                                   "followed by the words to fix. sections are separated by ---- line.")
     main(argparser.parse_args())
