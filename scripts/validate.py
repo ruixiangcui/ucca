@@ -24,6 +24,9 @@ class Validator:
         user_id = passage.attrib.get("userID")
         if user_id:
             passage_id += " " + user_id
+        task_id = passage.attrib.get("annotationID")
+        if task_id:
+            passage_id += " " + task_id
         if self.strict:
             print_errors(passage_id, errors)
         return passage_id, errors

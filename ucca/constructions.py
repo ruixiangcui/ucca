@@ -113,8 +113,8 @@ class Candidate:
         ret = self.extra.get(attr)
         if ret is None:
             self._annotate()
-            positions = {t.para_pos for t in self.terminals}
-            ret = self.extra[attr] = {t for t in self.terminals if int(t.tok[attr]) not in positions}
+            para_pos = {t.para_pos for t in self.terminals}
+            ret = self.extra[attr] = {t for t in self.terminals if int(t.tok[attr]) not in para_pos}
         return ret
 
     @property

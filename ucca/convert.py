@@ -651,8 +651,8 @@ def from_standard(root, extra_funcs=None):
         try:
             return {k: attribute_converters.get(k, str)(v)
                     for k, v in elem.find('attributes').items()}
-        except AttributeError:
-            raise core.UCCAError("Element %s has no attributes" % elem.get("ID"))
+        except AttributeError as e:
+            raise core.UCCAError("Element %s has no attributes" % elem.get("ID")) from e
 
     def _add_extra(obj, elem):
         if elem.find('extra') is not None:
@@ -821,7 +821,7 @@ def get_json_attrib(d):
     return attrib or None
 
 
-def from_json(lines, *args, skip_category_mapping=False, **kwargs):
+def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, **kwargs):
     """Convert text (or dict) in UCCA-App JSON format to a Passage object.
         According to the API, annotation units are organized in a tree, where the full unit is included as a child of
           its parent: https://github.com/omriabnd/UCCA-App/blob/master/UCCAApp_REST_API_Reference.pdf
@@ -833,23 +833,32 @@ def from_json(lines, *args, skip_category_mapping=False, **kwargs):
         parent_tree_id: the tree_id of the node's parent, where 0 is the root
     :param lines: iterable of lines in JSON format, describing a single passage.
     :param skip_category_mapping: if False, translate category names to edge tag abbreviations; if True, don't
+    :param by_external_id: set passage ID to be the external ID of the source passage rather than its ID
     :return: generator of Passage objects
     """
     del args, kwargs
     d = lines if isinstance(lines, dict) else json.loads("".join(lines))
-    all_categories = d["project"]["layer"]["categories"]
+    passage_id = d["passage"]["id"]
+    attrib = get_json_attrib(d)
+    if by_external_id:
+        attrib["passageID"] = passage_id
+        external_id = d["passage"]["external_id"]
+        assert external_id, "No external ID found for passage %s (task %s)" % (passage_id, d.get("id", "unknown"))
+        passage_id = external_id
+    passage = core.Passage(str(passage_id), attrib=attrib)
 
-    passage = core.Passage(str(d["passage"]["id"]), attrib=get_json_attrib(d))
     # Create terminals
     l0 = layer0.Layer0(passage)
     token_id_to_terminal = {token["id"]: l0.add_terminal(
         text=token["text"], punct=not token["require_annotation"], paragraph=1)
         for token in sorted(d["tokens"], key=itemgetter("index_in_task"))}
+
     # Create non-terminals
     l1 = layer1.Layer1(passage)
     tree_id_to_node = {}
     token_id_to_preterminal = {}
-    category_id_to_name = {c["id"]: c["name"] for c in all_categories} if all_categories else None
+    category_id_to_name = {c["id"]: c["name"] for c in d["project"]["layer"]["categories"]}
+    category_name_to_edge_tag = {} if skip_category_mapping else EdgeTags.__dict__
     # Assuming topological sort: parents always appear before children
     for unit in sorted(d["annotation_units"], key=itemgetter("is_remote_copy")):  # Get non-remotes first
         tree_id = unit["tree_id"]
@@ -867,29 +876,25 @@ def from_json(lines, *args, skip_category_mapping=False, **kwargs):
             continue
         try:
             parent_node = tree_id_to_node[parent_tree_id]
-        except KeyError:
-            raise ValueError("Unit %s appears before its parent, %s" % (tree_id, parent_tree_id))
-        category_name_to_edge_tag = {} if skip_category_mapping else EdgeTags.__dict__
+        except KeyError as e:
+            raise ValueError("Unit %s appears before its parent, %s" % (tree_id, parent_tree_id)) from e
 
-        all_tags = []
-
-        for category in unit["categories"]:
+        tags = []
+        for category in unit.get("categories", ()):
             try:
                 category_name = category.get("name") or category_id_to_name[category["id"]]
-            except TypeError:
-                raise ValueError("Missing category name, and no category list available")
-            except KeyError:
-                raise ValueError("Category missing from layer: " + category["id"])
+            except KeyError as e:
+                raise ValueError("Category missing from layer: " + category["id"]) from e
             tag = category_name_to_edge_tag.get(category_name.replace(" ", ""), category_name)
-            all_tags.append(tag)
+            tags.append(tag)
 
-        for tag in all_tags:
+        if not tags:
+            raise ValueError("Unit %s has no categories" % tree_id)
+
+        for tag in tags:
             if tag in IGNORED_ABBREVIATIONS:
                 continue
-            if unit["type"] == "IMPLICIT":
-                children_tokens = []
-            else:
-                children_tokens = unit["children_tokens"]
+            children_tokens = [] if unit["type"] == "IMPLICIT" else unit["children_tokens"]
             try:
                 terminal = token_id_to_terminal[children_tokens[0]["id"]] if len(children_tokens) == 1 else None
             except (IndexError, KeyError):
@@ -897,8 +902,9 @@ def from_json(lines, *args, skip_category_mapping=False, **kwargs):
             if remote:
                 try:
                     node = tree_id_to_node[cloned_from_tree_id]
-                except KeyError:
-                    raise ValueError("Remote copy %s refers to nonexistent unit: %s" % (tree_id, cloned_from_tree_id))
+                except KeyError as e:
+                    raise ValueError("Remote copy %s refers to nonexistent unit: %s" %
+                                     (tree_id, cloned_from_tree_id)) from e
                 l1.add_remote(parent_node, tag, node)
             elif not skip_category_mapping and terminal and layer0.is_punct(terminal):
                 tree_id_to_node[tree_id] = l1.add_punct(None, terminal)
@@ -906,17 +912,19 @@ def from_json(lines, *args, skip_category_mapping=False, **kwargs):
                 node = tree_id_to_node[tree_id] = l1.add_fnode(parent_node, tag, implicit=(unit["type"] == "IMPLICIT"))
                 node.extra['tree_id'] = tree_id
                 comment = unit.get("comment")
-                node.extra["all_tags"] = ';'.join(all_tags)
+                node.extra["all_tags"] = ';'.join(tags)
                 if comment:
                     node.extra['remarks'] = comment
                 for token in children_tokens:
                     token_id_to_preterminal[token["id"]] = node
             # currently only supports one non-ignored category, TODO: fix it
+
     # Attach terminals to non-terminals
     for token_id, node in token_id_to_preterminal.items():
         terminal = token_id_to_terminal[token_id]
         if skip_category_mapping or not layer0.is_punct(terminal):
             node.add(EdgeTags.Terminal, terminal)
+
     return passage
 
 
@@ -982,8 +990,8 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
         def _outgoing(elements, n):  # (ID element, outgoing edges sharing parent & child) for all n's children
             return [(elements + [i], list(es)) for i, (_, es) in enumerate(
                 groupby(sorted([e for e in n if e.tag not in IGNORED_EDGE_TAGS],
-                               key=attrgetter("child.start_position")),
-                        key=lambda e: e.child.ID), start=1)]
+                               key=attrgetter("child.start_position", "child.ID")),
+                        key=attrgetter("child.ID")), start=1)]
 
         def _extra_tag(e):  # categories mentioned in the "remarks" attribute of the "extra" element in the node
             tag = e.child.extra.get("remarks")
@@ -1016,8 +1024,9 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
                     try:
                         category["id"] = category_name_to_id[category["name"]]
                         del category["name"]
-                    except KeyError:
-                        raise ValueError("Category missing from layer: " + category["name"])
+                    except KeyError as e:
+                        raise ValueError("Category missing from layer: " + category["name"]) from e
+            assert categories, "Non-root unit without categories: %s" % node.ID
             unit = _create_unit(tree_id_elements, node, terminals, categories, is_remote_copy=remote,
                                 parent_tree_id=parent_annotation_unit["tree_id"])
             if remote:
@@ -1119,20 +1128,22 @@ def split2segments(passage, is_sentences, remarks=False, lang="en", ids=None):
     return split_passage(passage, ends, remarks=remarks, ids=ids)
 
 
-def split_passage(passage, ends, remarks=False, ids=None):
+def split_passage(passage, ends, remarks=False, ids=None, suffix_format="%03d", suffix_start=0):
     """
     Split the passage on the given terminal positions
     :param passage: passage to split
     :param ends: sequence of positions at which the split passages will end
     :param remarks: add original node ID as remarks to the new nodes
     :param ids: optional iterable of ids, the same length as ends, to set passage IDs for each split
+    :param suffix_format: in case ids is None, use this format for the running index suffix
+    :param suffix_start: in case ids is None, use this starting index for the running index suffix
     :return: sequence of passages
     """
     passages = []
-    for i, (start, end, index) in enumerate(zip([0] + ends[:-1], ends, ids or repeat(None))):
+    for i, (start, end, index) in enumerate(zip([0] + ends[:-1], ends, ids or repeat(None)), start=suffix_start):
         if start == end:
             continue
-        other = core.Passage(ID=index or "%s%03d" % (passage.ID, i), attrib=passage.attrib.copy())
+        other = core.Passage(ID=index or ("%s" + suffix_format) % (passage.ID, i), attrib=passage.attrib.copy())
         other.extra = passage.extra.copy()
         # Create terminals and find layer 1 nodes to be included
         l0 = passage.layer(layer0.LAYER_ID)
@@ -1141,12 +1152,13 @@ def split_passage(passage, ends, remarks=False, ids=None):
         level = set()
         nodes = set()
         id_to_other = {}
-        paragraphs = set()
+        paragraphs = []
         for terminal in l0.all[start:end]:
             other_terminal = other_l0.add_terminal(terminal.text, terminal.punct, 1)
             _copy_extra(terminal, other_terminal, remarks)
             other_terminal.extra["orig_paragraph"] = terminal.paragraph
-            paragraphs.add(terminal.paragraph)
+            if terminal.paragraph not in paragraphs:
+                paragraphs.append(terminal.paragraph)
             id_to_other[terminal.ID] = other_terminal
             level.update(terminal.parents)
             nodes.add(terminal)
@@ -1156,7 +1168,7 @@ def split_passage(passage, ends, remarks=False, ids=None):
                         e.tag != layer1.EdgeTags.Punctuation and e.parent not in nodes)
 
         other_l1 = layer1.Layer1(root=other, attrib=passage.layer(layer1.LAYER_ID).attrib.copy())
-        _copy_l1_nodes(passage, other, id_to_other, nodes, remarks=remarks)
+        _copy_l1_nodes(passage, other, id_to_other, set(nodes), remarks=remarks)
         attach_punct(other_l0, other_l1)
         for j, paragraph in enumerate(paragraphs, start=1):
             other_l0.doc(j)[:] = l0.doc(paragraph)
@@ -1220,7 +1232,7 @@ def _copy_l1_nodes(passage, other, id_to_other, include=None, remarks=False):
     while queue:
         node, other_node = queue.pop()
         if node.tag == layer1.NodeTags.Linkage:
-            if include is None or set(include).issuperset(node.children):
+            if include is None or include.issuperset(node.children):
                 linkages.append(node)
             continue
         if other_node is None:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-import argparse
 import sys
 
+import argparse
 from tqdm import tqdm
 
 from uccaapp.api import ServerAccessor
@@ -32,8 +32,8 @@ class AnnotationTaskCreator(ServerAccessor):
             "Wrong input task given: %s for task ID %s" % (task["type"], task_id)
         assert task["status"] == "SUBMITTED", "Parent task is not submitted: %s" % task_id
         return dict(type="REVIEW" if review else "ANNOTATION", project=task["project"], user=user,
-                    passage=task["passage"], manager_comment=manager_comment or "", user_comment="", parent=task,
-                    is_demo=False, is_active=True)
+                    passage=task["passage"], manager_comment=manager_comment or task.get("manager_comment", ""),
+                    user_comment=task.get("user_comment", ""), parent=task, is_demo=False, is_active=True)
 
     @staticmethod
     def read_lines(filename):
