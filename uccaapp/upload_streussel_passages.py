@@ -48,7 +48,7 @@ class StreusselPassageUploader(ServerAccessor):
                 passage = list(from_text(passage_text.split(), tokenized=True))[0]
                 tok_user_task_in.update(to_json(passage, return_dict=True, tok_task=True))
 
-                self.submit_tokenization_task(**tok_user_task_in)
+                self.submit_task(**tok_user_task_in)
                 print("Uploaded passage " + filename + " successfully.", file=sys.stderr)
                 if log:
                     print(filename.split(".")[-2], passage_out["id"], tok_task_out["id"], file=log_h, sep="\t")

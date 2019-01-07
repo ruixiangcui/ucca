@@ -95,96 +95,70 @@ class ServerAccessor:
     def login(self, email, password):
         return self.request("post", "login", json=dict(email=email, password=password)).json()
 
+    @staticmethod
+    def type(data):
+        return data.get("type", "").lower()
+
+    def update(self, data, prefix):
+        logging.debug("Updating %s %s: %s" % (self.type(data), prefix, json.dumps(data)))
+        out = self.request("put", prefix + "/%s/" % data["id"], json=data).json()
+        logging.debug("Updated %s %s: %s" % (data.get("type", ""), prefix, json.dumps(out)))
+        return out
+
+    def create(self, data, prefix):
+        logging.debug("Creating %s %s: %s" % (self.type(data), prefix, json.dumps(data)))
+        out = self.request("post", prefix + "/%s/" % data["id"], json=data).json()
+        logging.debug("Created %s %s: %s" % (self.type(data), prefix, json.dumps(out)))
+        return out
+
+    def get(self, _id, prefix):
+        logging.debug("Getting %s %s" % (prefix, _id))
+        out = self.request("get", "%s/%s" % (prefix, _id)).json()
+        logging.debug("Got %s: %s" % (prefix, json.dumps(out)))
+        return out
+
+    def submit_task(self, data):
+        logging.debug("Submitting %s task: %s" % (self.type(data), json.dumps(data)))
+        self.request("put", "user_tasks/%s/draft" % data["id"], json=data)
+        out = self.request("put", "user_tasks/%s/submit" % data["id"], json=data).json()
+        logging.debug("Submitted %s task: %s" % (self.type(data), json.dumps(out)))
+        return out
+
     def get_source(self, source_id):
-        logging.debug("Getting source %s" % source_id)
-        source_out = self.request("get", "sources/%s/" % source_id).json()
-        logging.debug("Got source: " + json.dumps(source_out))
-        return source_out
+        return self.get(source_id, prefix="sources")
 
     def get_project(self, project_id):
-        logging.debug("Getting project %s" % project_id)
-        project_out = self.request("get", "projects/%s/" % project_id).json()
-        logging.debug("Got project: " + json.dumps(project_out))
-        return project_out
+        return self.get(project_id, prefix="projects")
 
     def get_layer(self, layer_id):
-        logging.debug("Getting layer %s" % layer_id)
-        layer_out = self.request("get", "layers/%s/" % layer_id).json()
-        logging.debug("Got layer: " + json.dumps(layer_out))
-        return layer_out
+        return self.get(layer_id, prefix="layers")
 
     def get_category(self, category_id):
-        logging.debug("Getting category %s" % category_id)
-        category_out = self.request("get", "categories/%s/" % category_id).json()
-        logging.debug("Got category: " + json.dumps(category_out))
-        return category_out
+        return self.get(category_id, prefix="categories")
 
     def create_category(self, **kwargs):
-        logging.debug("Creating category: " + json.dumps(kwargs))
-        category_out = self.request("post", "categories/", json=kwargs).json()
-        logging.debug("Created category: " + json.dumps(category_out))
-        return category_out
+        return self.create(kwargs, prefix="categories")
 
     def get_user(self, user_id):
-        logging.debug("Getting user " + user_id)
-        user_out = self.request("get", "users/%s/" % user_id).json()
-        logging.debug("Got user: " + json.dumps(user_out))
-        return user_out
+        return self.get(user_id, prefix="users")
 
     def get_task(self, task_id):
-        logging.debug("Getting task %s" % task_id)
-        task_out = self.request("get", "tasks/%s" % task_id).json()
-        logging.debug("Got task: " + json.dumps(task_out))
-        return task_out
-
-    def get_user_task(self, task_id):
-        logging.debug("Getting user task %s" % task_id)
-        task_out = self.request("get", "user_tasks/%s" % task_id).json()
-        logging.debug("Got user task: " + json.dumps(task_out))
-        return task_out
-
-    def get_passage(self, passage_id):
-        logging.debug("Getting passage %s" % passage_id)
-        passage_out = self.request("get", "passages/%s" % passage_id).json()
-        logging.debug("Got passage: " + json.dumps(passage_out))
-        return passage_out
-
-    def create_passage(self, **kwargs):
-        logging.debug("Creating passage: " + json.dumps(kwargs))
-        passage_out = self.request("post", "passages/", json=kwargs).json()
-        logging.debug("Created passage: " + json.dumps(passage_out))
-        return passage_out
-
-    def update_passage(self, **kwargs):
-        logging.debug("Updating passage: " + json.dumps(kwargs))
-        passage_out = self.request("put", "passages/%s/" % kwargs["id"], json=kwargs).json()
-        logging.debug("Updated passage: " + json.dumps(passage_out))
-        return passage_out
+        return self.get(task_id, prefix="tasks")
 
     def create_task(self, **kwargs):
-        task_type = kwargs["type"].lower()
-        logging.debug("Creating " + task_type + " task: " + json.dumps(kwargs))
-        task_out = self.request("post", "tasks/", json=kwargs).json()
-        logging.debug("Created " + task_type + " task: " + json.dumps(task_out))
-        return task_out
+        return self.create(kwargs, prefix="tasks")
 
     def update_task(self, **kwargs):
-        task_type = kwargs["type"].lower()
-        logging.debug("Updating " + task_type + " task: " + json.dumps(kwargs))
-        task_out = self.request("put", "tasks/%s/" % kwargs["id"], json=kwargs).json()
-        logging.debug("Updated " + task_type + " task: " + json.dumps(task_out))
-        return task_out
+        return self.update(kwargs, prefix="tasks")
 
-    def submit_tokenization_task(self, **kwargs):
-        logging.debug("Submitting tokenization task: " + json.dumps(kwargs))
-        self.request("put", "user_tasks/%s/draft" % kwargs["id"], json=kwargs)
-        tok_user_task_out = self.request("put", "user_tasks/%s/submit" % kwargs["id"], json=kwargs).json()
-        logging.debug("Submitted tokenization task: " + json.dumps(tok_user_task_out))
-        return tok_user_task_out
+    def get_user_task(self, task_id):
+        return self.get(task_id, prefix="user_tasks")
 
-    def submit_annotation_task(self, **kwargs):
-        logging.debug("Submitting annotation task: " + json.dumps(kwargs))
-        self.request("put", "user_tasks/%s/draft" % kwargs["id"], json=kwargs)
-        ann_user_task_out = self.request("put", "user_tasks/%s/submit" % kwargs["id"], json=kwargs).json()
-        logging.debug("Submitted annotation task: " + json.dumps(ann_user_task_out))
-        return ann_user_task_out
+    def get_passage(self, passage_id):
+        return self.get(passage_id, prefix="passages")
+
+    def create_passage(self, **kwargs):
+        return self.create(kwargs, prefix="passages")
+
+    def update_passage(self, **kwargs):
+        return self.update(kwargs, prefix="passages")
