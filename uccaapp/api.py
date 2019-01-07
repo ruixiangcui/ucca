@@ -168,6 +168,13 @@ class ServerAccessor:
         logging.debug("Created " + task_type + " task: " + json.dumps(task_out))
         return task_out
 
+    def update_task(self, **kwargs):
+        task_type = kwargs["type"].lower()
+        logging.debug("Updating " + task_type + " task: " + json.dumps(kwargs))
+        task_out = self.request("put", "tasks/%s/" % kwargs["id"], json=kwargs).json()
+        logging.debug("Updated " + task_type + " task: " + json.dumps(task_out))
+        return task_out
+
     def submit_tokenization_task(self, **kwargs):
         logging.debug("Submitting tokenization task: " + json.dumps(kwargs))
         self.request("put", "user_tasks/%s/draft" % kwargs["id"], json=kwargs)
