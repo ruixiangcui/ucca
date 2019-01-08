@@ -27,6 +27,8 @@ class NodeTags:
 
 class EdgeTags:
     """Layer 1 Edge tags."""
+    Unanalyzable = 'UNA'
+    Uncertain = 'UNC'
     ParallelScene = 'H'
     Participant = 'A'
     Process = 'P'

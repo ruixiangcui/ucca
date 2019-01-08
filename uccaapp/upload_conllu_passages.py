@@ -37,7 +37,7 @@ class ConlluPassageUploader(ServerAccessor):
                     try:
                         for line in f:
                             line = line.strip()
-                            m = re.match("^# sent_id = (.*)", line)
+                            m = re.match(r"^# sent_id = (.*)", line)
                             if m:
                                 external_id = m.group(1)
                             elif line:
@@ -66,7 +66,7 @@ class ConlluPassageUploader(ServerAccessor):
         self.submit_tokenization_task(**tok_user_task_in)
         task_in = dict(type="ANNOTATION", status="NOT_STARTED", project=self.project, user=self.annotation_user,
                        passage=tok_task_out["passage"], manager_comment="External ID: "+external_id,
-                       user_comment="", parent=tok_task_out, is_demo=False, is_active=True)
+                       user_comment=external_id, parent=tok_task_out, is_demo=False, is_active=True)
         self.create_task(**task_in)
         print("Uploaded passage "+external_id+" successfully")
 

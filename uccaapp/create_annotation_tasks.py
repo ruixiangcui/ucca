@@ -2,6 +2,7 @@
 import sys
 
 import argparse
+from tqdm import tqdm
 
 from uccaapp.api import ServerAccessor
 
@@ -12,29 +13,39 @@ class AnnotationTaskCreator(ServerAccessor):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def create_annotation_task(self, filename, review=False, manager_comment=None, **kwargs):
+    def create_tasks(self, filename, log=None, **kwargs):
+        log_h = open(log, "w", encoding="utf-8") if log else None
+        lines = list(self.read_lines(filename))
+        for user_id, task_id in tqdm(lines, unit="task", desc="Creating tasks"):
+            task = self.create_task(**self.build_task(user_id, task_id, **kwargs))
+            if log:
+                print(task["id"], file=log_h, sep="\t", flush=True)
+        print("Uploaded %d tasks successfully." % len(lines), file=sys.stderr)
+        if log:
+            log_h.close()
+
+    def build_task(self, user_id, task_id, review=False, manager_comment=None, **kwargs):
         del kwargs
-        with open(filename) as f:
-            num = 0
+        user = self.get_task(user_id)
+        task = self.get_task(task_id)
+        assert task["type"] in (["ANNOTATION", "REVIEW"] if review else ["TOKENIZATION"]), \
+            "Wrong input task given: %s for task ID %s" % (task["type"], task_id)
+        assert task["status"] == "SUBMITTED", "Parent task is not submitted: %s" % task_id
+        return dict(type="REVIEW" if review else "ANNOTATION", project=task["project"], user=user,
+                    passage=task["passage"], manager_comment=manager_comment or task.get("manager_comment", ""),
+                    user_comment=task.get("user_comment", ""), parent=task, is_demo=False, is_active=True)
+
+    @staticmethod
+    def read_lines(filename):
+        with open(filename, encoding="utf-8") as f:
             for line in f:
                 fields = line.strip().split()
-                if len(fields) != 2:
-                    sys.stderr.write("Error in line: "+line.strip())
+                try:
+                    user_id, task_id = fields
+                except ValueError:
+                    print("Error in line: " + line.strip(), file=sys.stderr)
                     continue
-                user_id = fields[0]
-                user_model = self.get_user(user_id)
-                task_id = fields[1]
-                task_out = self.get_task(task_id)
-                assert task_out["type"] in (["ANNOTATION", "REVIEW"] if review else ["TOKENIZATION"]), \
-                    "Wrong input task given: %s for task ID %s" % (task_out["type"], task_id)
-                task_in = dict(type="REVIEW" if review else "ANNOTATION", status="NOT_STARTED",
-                               project=task_out["project"], user=user_model,
-                               passage=task_out["passage"], manager_comment=manager_comment or "",
-                               user_comment="", parent=task_out,
-                               is_demo=False, is_active=True)
-                self.create_task(**task_in)
-                num += 1
-            print("Uploaded %d tasks successfully." % num, file=sys.stderr)
+                yield user_id, task_id
 
     @staticmethod
     def add_arguments(argparser):
@@ -43,11 +54,12 @@ class AnnotationTaskCreator(ServerAccessor):
                                                 "(if given --review) or a tokenization task")
         ServerAccessor.add_arguments(argparser)
         argparser.add_argument("-r", "--review", action="store_true", help="Create annotation/review task")
-        argparser.add_argument("--manager-comment", action="store_true", help="Manager comment to set for all tasks")
+        argparser.add_argument("-l", "--log", help="filename to write log of uploaded passages to")
+        argparser.add_argument("--manager-comment", help="Manager comment to set for all tasks")
 
 
 def main(**kwargs):
-    AnnotationTaskCreator(**kwargs).create_annotation_task(**kwargs)
+    AnnotationTaskCreator(**kwargs).create_tasks(**kwargs)
 
 
 if __name__ == "__main__":

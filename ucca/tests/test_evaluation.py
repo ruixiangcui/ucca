@@ -1,11 +1,14 @@
 from itertools import repeat
 
+import os
 import pytest
+from functools import partial
 from io import StringIO
 
-from ucca import core, layer0, layer1
+from ucca import core, layer0, layer1, convert
 from ucca.evaluation import evaluate, LABELED, UNLABELED, WEAK_LABELED
-from .conftest import PASSAGES
+from ucca.validation import validate
+from .conftest import PASSAGES, load_xml
 
 PRIMARY = "primary"
 REMOTE = "remote"
@@ -304,9 +307,21 @@ def test_evaluate_self(create, units, errors, normalize):
                                  (function1, function2, {(LABELED, PRIMARY): 0.6, (LABELED, REMOTE): 0,
                                                          (UNLABELED, PRIMARY): 1, (UNLABELED, REMOTE): 1,
                                                          (WEAK_LABELED, PRIMARY): 0.8, (WEAK_LABELED, REMOTE): 0}),
+                                 tuple(partial(convert.from_standard, load_xml(
+                                     os.path.join("test_files", "%s.xml" % f))) for f in ("120_parsed", "standard3")) +
+                                 ({(LABELED, PRIMARY): 3/14, (LABELED, REMOTE): 0,
+                                   (UNLABELED, PRIMARY): 0.5, (UNLABELED, REMOTE): 0,
+                                   (WEAK_LABELED, PRIMARY): 3/14, (WEAK_LABELED, REMOTE): 0},)
                          ))
 @pytest.mark.parametrize("units", (True, False), ids=("units", ""))
 @pytest.mark.parametrize("errors", (True, False), ids=("errors", ""))
 def test_evaluate(create1, create2, f1, units, errors):
-    scores = evaluate(create1(), create2(), units=units, errors=errors)
+    p1 = create1()
+    p2 = create2()
+    validation_errors_before = [list(validate(p, linkage=False)) for p in (p1, p2)]
+    scores = evaluate(p1, p2, units=units, errors=errors)
+    validation_errors_after = [list(validate(p, linkage=False)) for p in (p1, p2)]
+    for before, after in zip(validation_errors_before, validation_errors_after):
+        if not before:
+            assert not after
     check_primary_remote(scores, f1)

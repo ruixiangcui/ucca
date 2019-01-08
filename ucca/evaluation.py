@@ -1,10 +1,11 @@
 """
 The evaluation library for UCCA layer 1.
-v1.2
+v1.3
 2016-12-25: move common Fs to root before evaluation
 2017-01-04: flatten centers, do not add 1 (for root) to mutual
 2017-01-16: fix bug in moving common Fs
 2018-04-12: exclude punctuation nodes regardless of edge tag
+2018-12-11: fix another bug in moving common Fs
 """
 from collections import Counter, OrderedDict
 from itertools import groupby
@@ -41,12 +42,10 @@ def move_functions(p1, p2):
     """
     f1, f2 = [{get_yield(u): u for u in p.layer(layer1.LAYER_ID).all
                if u.tag == NodeTags.Foundational and u.ftag == EdgeTags.Function} for p in (p1, p2)]
-    for positions in f1.keys() & f2.keys():
+    for positions in f1.keys() & f2.keys():  # positions is a yield corresponding to a Function in both passages
         for (p, unit) in ((p1, f1[positions]), (p2, f2[positions])):
-            for parent in unit.parents:
-                tag = unit.ftag
-                parent.remove(unit)
-                p.layer(layer1.LAYER_ID).heads[0].add(tag, unit)
+            unit.fparent.remove(unit)  # Remove from current primary parent (but preserve remote parents)
+            p.layer(layer1.LAYER_ID).heads[0].add(EdgeTags.Function, unit)  # Add to root
 
 
 def get_text(p, positions):
@@ -122,7 +121,8 @@ class Evaluator:
         """
         mutual = OrderedDict()
         counters = OrderedDict() if self.errors and eval_type == LABELED else None
-        reference_yield_tags = None if r is None else create_passage_yields(r)[ALL_EDGES.name]
+        passage_yields = create_passage_yields(r or p2)
+        reference_yield_tags = passage_yields[ALL_EDGES.name] if passage_yields else None
         maps = [{} if p is None else create_passage_yields(p, self.constructions, tags=False, reference=p2,
                                                            reference_yield_tags=reference_yield_tags) for p in (p1, p2)]
         if p1 is not None:
@@ -340,7 +340,7 @@ def evaluate(guessed, ref, converter=None, verbose=False, constructions=DEFAULT,
     if converter is not None:
         guessed = converter(guessed)
         ref = converter(ref)
-    if normalize:
+    if normalize:  # FIXME clone passages to avoid modifying the original ones
         for passage in (guessed, ref):
             normalization.normalize(passage)  # flatten Cs inside Cs
         move_functions(guessed, ref)  # move common Fs to be under the root
