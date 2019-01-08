@@ -33,7 +33,7 @@ class TaskStatusSetter(ServerAccessor):
 
 
 def main(**kwargs):
-    list(TaskStatusSetter(**kwargs).set_task_status(ONGOING_STATUS, **kwargs))
+    list(TaskStatusSetter(**kwargs).set_task_status(status=ONGOING_STATUS, **kwargs))
 
 
 if __name__ == "__main__":
