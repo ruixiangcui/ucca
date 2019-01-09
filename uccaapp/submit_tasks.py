@@ -35,6 +35,7 @@ class TaskSubmitter(ServerAccessor):
                 except ValueError as e:
                     raise ValueError("Failed reading json for task %s:\n%s" % (task_id, json.dumps(task))) from e
                 # validate the task
+                normalization.normalize(passage)
                 validation_errors = list(validation.validate(passage, linkage=False))
                 if len(validation_errors) == 0:
                         self.submit_task(task)
