@@ -49,7 +49,7 @@ def tokens_match(tokens1, tokens2, mode):
 
 
 def main(output = None, comment = False, sentence_level = False, categories = (), tokens = (), tokens_mode = CONSECUTIVE,
-         write = False, **kwargs):
+         case_insensitive = False, write = False, **kwargs):
     filtered_nodes = []
     for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(write=False, **kwargs):
         if sentence_level:
@@ -62,6 +62,9 @@ def main(output = None, comment = False, sentence_level = False, categories = ()
                 filtered_nodes.append(("comment",node,task_id,user_id))
             if tokens and not node.attrib.get("implicit"):
                 unit_tokens = [t.text for t in node.get_terminals(punct=True)]
+                if case_insensitive:
+                    unit_tokens = [x.lower() for x in unit_tokens]
+                    tokens = [x.lower() for x in tokens]
                 if tokens_match(unit_tokens,tokens,tokens_mode):
                     filtered_nodes.append(('TOKENS', node, task_id, user_id))
             else:
@@ -89,6 +92,8 @@ if __name__ == "__main__":
                                  help="mode of search for the tokens: CONSECUTIVE,SUBSEQUENCE,SUBSET")
     argument_parser.add_argument("--sentence-level", action="store_true",
                                  help="output sentences rather than units")
+    argument_parser.add_argument("--case-insensitive", action="store_true",
+                                 help="make tokens search case insensitive")
     argument_parser.add_argument("--comment", action="store_true", help="Output all the units that have comments")
 
     main(**vars(argument_parser.parse_args()))
