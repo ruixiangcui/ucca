@@ -6,6 +6,7 @@ from uccaapp.download_task import TaskDownloader
 
 desc = "Get all units according to a specified filter. Units that meet any of the filters are output."
 
+
 def get_top_level_ancestor(node):
     """
     Traverses the passage upwards until a unit which is immediately below the root is reached
@@ -21,25 +22,29 @@ def get_top_level_ancestor(node):
             parent = parent.fparent
         return parent
 
-def main(output = None, comment = False, categories = (), **kwargs):
+
+def main(output=None, comment=False, categories=(), **kwargs):
     filtered_nodes = []
     for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(**kwargs, write=False):
         for node in passage.layer(layer1.LAYER_ID).all:
             if comment and node.extra.get("remarks"):
-                filtered_nodes.append(("comment",node,task_id,user_id))
+                filtered_nodes.append(("comment", node, task_id, user_id))
             else:
-                all_tags = node.extra.get("all_tags")
+                all_tags = []
+                for edge in node:
+                    all_tags.extend([c.tag for c in edge.categories])
                 if all_tags:
-                    intersection = set(categories) & set(all_tags.split(';'))
+                    intersection = set(categories) & set(all_tags)
                     if intersection:
-                        filtered_nodes.append((str(list(intersection)),node,task_id,user_id))
+                        filtered_nodes.append((str(list(intersection)), node, task_id, user_id))
 
     if output:
         with open(output,'w') as f:
             for filter_type,node,task_id,user_id in filtered_nodes:
                 ancestor = get_top_level_ancestor(node)
                 print(filter_type, task_id, user_id, node.extra.get("tree_id"), node.to_text(),
-                      ancestor, str(node.extra.get("remarks")).replace("\n","|"), file=f, sep="\t")
+                      ancestor, str(node.extra.get("remarks")).replace("\n", "|"), file=f, sep="\t")
+
 
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser(description=desc)

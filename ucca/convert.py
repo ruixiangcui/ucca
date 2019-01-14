@@ -615,6 +615,11 @@ def to_standard(passage):
                                           toID=edge.child.ID, type=edge.tag)
                 _add_attrib(edge, edge_elem)
                 _add_extra(edge, edge_elem)
+                for category in edge:
+                    category_elem = ET.SubElement(edge_elem, "category", tag=category.tag,
+                                                  layer_name=category.layer, slot=str(category.slot),
+                                                  parent_name="" if not category.parent else category.parent)
+                    _add_extra(category, category_elem)
     return root
 
 
@@ -685,8 +690,18 @@ def from_standard(root, extra_funcs=None):
     # Adding edges (must have all nodes before doing so)
     for from_node, edge_elem in edge_elems:
         to_node = passage.nodes[edge_elem.get('toID')]
-        tag = edge_elem.get('type')
-        edge = from_node.add(tag, to_node, edge_attrib=_get_attrib(edge_elem))
+        categories_elems = edge_elem.findall('category')
+        categories = []
+        for c in categories_elems:
+            tag = c.get('tag')
+            slot = c.get('slot')
+            layer = c.get('layer_name')
+            parent = c.get('parent_name')
+            categories.append((tag, slot, layer, parent))
+        if not categories:  # an old xml format
+            tag = edge_elem.get('type')
+            categories.append((tag, "", "", ""))
+        edge = from_node.add(categories, to_node, edge_attrib=_get_attrib(edge_elem))
         _add_extra(edge, edge_elem)
 
     return passage
@@ -805,6 +820,32 @@ IGNORED_CATEGORIES = {UNANALYZABLE, UNCERTAIN}
 IGNORED_ABBREVIATIONS = {EdgeTags.Unanalyzable,EdgeTags.Uncertain}
 
 
+def get_json_attrib(d):
+    attrib = {}
+    user = d.get("user")
+    if user:
+        user_id = user.get("id")
+        if user_id:
+            attrib["userID"] = user_id
+    remarks = d.get("user_comment")
+    if remarks:
+        attrib["remarks"] = remarks
+    annotation_id = d.get("id")
+    if annotation_id:
+        attrib["annotationID"] = annotation_id
+    return attrib or None
+
+
+def get_categories_details(d):
+    # mapping from a category id to the category's parent, layer
+    curr_layer = d['project']['layer']
+    categories = {}
+    while curr_layer:
+        base_layer = curr_layer['name']
+        for c in curr_layer['categories']:
+            categories[c['id']] = {'name': c["name"], 'parent': c['parent'] if 'parent' in c else None, 'layer': base_layer}
+        curr_layer = curr_layer['parent']
+    return base_layer, categories
 
 
 def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, **kwargs):
@@ -826,6 +867,8 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
     d = lines if isinstance(lines, dict) else json.loads("".join(lines))
     passage_id = d["passage"]["id"]
     attrib = get_json_attrib(d)
+    base_layer, categories = get_categories_details(d)
+    base_slot = ""
     if by_external_id:
         attrib["passageID"] = passage_id
         external_id = d["passage"]["external_id"]
@@ -843,7 +886,6 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
     l1 = layer1.Layer1(passage)
     tree_id_to_node = {}
     token_id_to_preterminal = {}
-    category_id_to_name = {c["id"]: c["name"] for c in d["project"]["layer"]["categories"]}
     category_name_to_edge_tag = {} if skip_category_mapping else EdgeTags.__dict__
     # Assuming topological sort: parents always appear before children
     for unit in sorted(d["annotation_units"], key=itemgetter("is_remote_copy")):  # Get non-remotes first
@@ -865,51 +907,54 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
         except KeyError as e:
             raise ValueError("Unit %s appears before its parent, %s" % (tree_id, parent_tree_id)) from e
 
-        tags = []
+        unit_categories = []
         for category in unit.get("categories", ()):
             try:
-                category_name = category.get("name") or category_id_to_name[category["id"]]
+                category_name = category.get("name") or categories[category["id"]]['name']
             except KeyError as e:
                 raise ValueError("Category missing from layer: " + category["id"]) from e
-            tag = category_name_to_edge_tag.get(category_name.replace(" ", ""), category_name)
-            tags.append(tag)
+            c_tag = category_name_to_edge_tag.get(category_name.replace(" ", ""), category_name.replace(" ", "_"))
+            c_slot = category["slot"] if 'slot' in category else ""
+            c_layer = categories[category["id"]]['layer']
+            if c_layer == base_layer:
+                base_slot = c_slot
+            c_parent = categories[category["id"]]['parent']
+            if c_parent:   # make sure it is not empty
+                c_parent = c_parent['name']
+            unit_categories.append((c_tag, c_slot, c_layer, c_parent))
 
-        if not tags:
+        if not unit_categories:
             raise ValueError("Unit %s has no categories" % tree_id)
 
-        for tag in tags:
-            if tag in IGNORED_ABBREVIATIONS:
-                continue
-            children_tokens = [] if unit["type"] == "IMPLICIT" else unit["children_tokens"]
+        unit_categories = [uc for uc in unit_categories if uc[0] not in IGNORED_ABBREVIATIONS]
+        children_tokens = [] if unit["type"] == "IMPLICIT" else unit["children_tokens"]
+        try:
+            terminal = token_id_to_terminal[children_tokens[0]["id"]] if len(children_tokens) == 1 else None
+        except (IndexError, KeyError):
+            terminal = None
+        if remote:
             try:
-                terminal = token_id_to_terminal[children_tokens[0]["id"]] if len(children_tokens) == 1 else None
-            except (IndexError, KeyError):
-                terminal = None
-            if remote:
-                try:
-                    node = tree_id_to_node[cloned_from_tree_id]
-                except KeyError as e:
-                    raise ValueError("Remote copy %s refers to nonexistent unit: %s" %
-                                     (tree_id, cloned_from_tree_id)) from e
-                l1.add_remote(parent_node, tag, node)
-            elif not skip_category_mapping and terminal and layer0.is_punct(terminal):
-                tree_id_to_node[tree_id] = l1.add_punct(None, terminal)
-            elif tree_id not in tree_id_to_node:
-                node = tree_id_to_node[tree_id] = l1.add_fnode(parent_node, tag, implicit=(unit["type"] == "IMPLICIT"))
-                node.extra['tree_id'] = tree_id
-                comment = unit.get("comment")
-                node.extra["all_tags"] = ';'.join(tags)
-                if comment:
-                    node.extra['remarks'] = comment
-                for token in children_tokens:
-                    token_id_to_preterminal[token["id"]] = node
-            # currently only supports one non-ignored category, TODO: fix it
+                node = tree_id_to_node[cloned_from_tree_id]
+            except KeyError as e:
+                raise ValueError("Remote copy %s refers to nonexistent unit: %s" %
+                                 (tree_id, cloned_from_tree_id)) from e
+            l1.add_remote(parent_node, unit_categories, node)
+        elif not skip_category_mapping and terminal and layer0.is_punct(terminal):
+            tree_id_to_node[tree_id] = l1.add_punct(None, terminal, base_layer, base_slot)
+        elif tree_id not in tree_id_to_node:
+            node = tree_id_to_node[tree_id] = l1.add_fnode(parent_node, unit_categories, implicit=(unit["type"] == "IMPLICIT"))
+            node.extra['tree_id'] = tree_id
+            comment = unit.get("comment")
+            if comment:
+                node.extra['remarks'] = comment
+            for token in children_tokens:
+                token_id_to_preterminal[token["id"]] = node
 
     # Attach terminals to non-terminals
     for token_id, node in token_id_to_preterminal.items():
         terminal = token_id_to_terminal[token_id]
         if skip_category_mapping or not layer0.is_punct(terminal):
-            node.add(EdgeTags.Terminal, terminal)
+            node.add([(EdgeTags.Terminal, base_slot, base_layer, "")], terminal)
 
     return passage
 
@@ -979,14 +1024,6 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
                                key=attrgetter("child.start_position", "child.ID")),
                         key=attrgetter("child.ID")), start=1)]
 
-        def _extra_tag(e):  # categories mentioned in the "remarks" attribute of the "extra" element in the node
-            tag = e.child.extra.get("remarks")
-            if tag:
-                tag = tag.upper().replace("ALSO ", "")
-                if len(tag) != 1:
-                    tag = None
-            return tag
-
         # (tree id elements, edges per child) for each edge
         queue = _outgoing([], root_node)
         while queue:  # breadth-first search
@@ -995,10 +1032,9 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
             node = edge.child
             remote = edge.attrib.get("remote", False)
             parent_annotation_unit = node_id_to_primary_annotation_unit[edge.parent.ID]
-            tags = [e.tag for e in edges]
             # This can be used for additional tags written in the remarks -- no agreed format but some workaround:
             # list(filter(None, (_extra_tag(e) for e in edges if not e.attrib.get("remote"))))
-            categories = [dict(name=edge_tag_to_category_name.get(t, t), slot=1) for t in tags]
+            categories = [dict(name=edge_tag_to_category_name.get(c.tag, c.tag), slot=int(c.slot) if c.slot else 1) for c in edge]
             terminals = node.get_terminals()
             outgoing = _outgoing(tree_id_elements, node)
             if not outgoing and len(terminals) > 1:
@@ -1228,19 +1264,22 @@ def _copy_l1_nodes(passage, other, id_to_other, include=None, remarks=False):
                     remotes.append((edge, other_node))
                     continue
                 if edge.child.layer.ID == layer0.LAYER_ID:
-                    other_node.add(edge.tag, id_to_other[edge.child.ID])
+                    edge_categories = [(c.tag, c.slot, c.layer, c.parent) for c in edge.categories]
+                    other_node.add(edge_categories, id_to_other[edge.child.ID])
                     continue
                 if edge.child.tag == layer1.NodeTags.Punctuation:
                     grandchild = edge.child.children[0]
                     other_child = other_l1.add_punct(other_node, id_to_other[grandchild.ID])
-                    other_child.incoming[0].tag = edge.tag
+                    other_child.incoming[0].categories = edge.categories
                 else:
-                    other_child = other_l1.add_fnode(other_node, edge.categories, implicit=edge.child.attrib.get("implicit"))
+                    edge_categories = [(c.tag, c.slot, c.layer, c.parent) for c in edge.categories]
+                    other_child = other_l1.add_fnode(other_node, edge_categories, implicit=edge.child.attrib.get("implicit"))
                     queue.append((edge.child, other_child))
                 id_to_other[edge.child.ID] = other_child
                 _copy_extra(edge.child, other_child, remarks)  # Add remotes
             elif is_remote:  # Cross-paragraph remote edge -> create implicit child instead
-                other_l1.add_fnode(other_node, edge.categories, implicit=True)
+                edge_categories = [(c.tag, c.slot, c.layer, c.parent) for c in edge.categories]
+                other_l1.add_fnode(other_node, edge_categories, implicit=True)
     for edge, parent in remotes:
         other_child = id_to_other.get(edge.child.ID)
         edge_categories = [(c.tag, c.slot, c.layer, c.parent) for c in edge.categories]

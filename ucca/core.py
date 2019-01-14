@@ -195,9 +195,9 @@ class Category:
 
     def __init__(self, tag, slot=None, layer=None, parent=None, attrib=None):
         self._tag = tag
-        self._slot = slot
-        self._layer = layer
-        self._parent = parent
+        self._slot = slot if slot else ""
+        self._layer = layer if layer else ""
+        self._parent = parent if parent else ""
         self.extra = {}
 
     @property
@@ -345,6 +345,8 @@ class Edge:
     def __repr__(self):
         return self.ID
 
+    def __getitem__(self, index):
+        return self._categories[index]
 
     def iter(self):
         """Iterates the :class:`Edge` objects in the subtree of self.
