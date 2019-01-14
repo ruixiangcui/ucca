@@ -44,14 +44,15 @@ class TaskDownloader(ServerAccessor):
             raise ValueError("Failed reading json for task %s:\n%s" % (task_id, json.dumps(task))) from e
         if normalize:
             normalization.normalize(passage)
-        if write:
-            write_passage(passage, binary=binary, outdir=out_dir, prefix=prefix, verbose=verbose)
-        if validate:
-            for error in validation.validate(passage, linkage=False):
-                print(passage.ID, task_id, user_id, error, file=validate, sep="\t", flush=True)
         if log:
             print(passage.ID, task_id, user_id, task["user_comment"], task["created_at"], task["updated_at"],
                   file=log, sep="\t", flush=True)
+        if validate:
+            for error in validation.validate(passage, linkage=False):
+                print(passage.ID, task_id, user_id, error, file=validate, sep="\t", flush=True)
+                # return passage, task_id, user_id
+        if write:
+            write_passage(passage, binary=binary, outdir=out_dir, prefix=prefix, verbose=verbose)
         return passage, task_id, user_id
 
     @staticmethod

@@ -1150,20 +1150,22 @@ def split2segments(passage, is_sentences, remarks=False, lang="en", ids=None):
     return split_passage(passage, ends, remarks=remarks, ids=ids)
 
 
-def split_passage(passage, ends, remarks=False, ids=None):
+def split_passage(passage, ends, remarks=False, ids=None, suffix_format="%03d", suffix_start=0):
     """
     Split the passage on the given terminal positions
     :param passage: passage to split
     :param ends: sequence of positions at which the split passages will end
     :param remarks: add original node ID as remarks to the new nodes
     :param ids: optional iterable of ids, the same length as ends, to set passage IDs for each split
+    :param suffix_format: in case ids is None, use this format for the running index suffix
+    :param suffix_start: in case ids is None, use this starting index for the running index suffix
     :return: sequence of passages
     """
     passages = []
-    for i, (start, end, index) in enumerate(zip([0] + ends[:-1], ends, ids or repeat(None))):
+    for i, (start, end, index) in enumerate(zip([0] + ends[:-1], ends, ids or repeat(None)), start=suffix_start):
         if start == end:
             continue
-        other = core.Passage(ID=index or "%s%03d" % (passage.ID, i), attrib=passage.attrib.copy())
+        other = core.Passage(ID=index or ("%s" + suffix_format) % (passage.ID, i), attrib=passage.attrib.copy())
         other.extra = passage.extra.copy()
         # Create terminals and find layer 1 nodes to be included
         l0 = passage.layer(layer0.LAYER_ID)
@@ -1172,12 +1174,13 @@ def split_passage(passage, ends, remarks=False, ids=None):
         level = set()
         nodes = set()
         id_to_other = {}
-        paragraphs = set()
+        paragraphs = []
         for terminal in l0.all[start:end]:
             other_terminal = other_l0.add_terminal(terminal.text, terminal.punct, 1)
             _copy_extra(terminal, other_terminal, remarks)
             other_terminal.extra["orig_paragraph"] = terminal.paragraph
-            paragraphs.add(terminal.paragraph)
+            if terminal.paragraph not in paragraphs:
+                paragraphs.append(terminal.paragraph)
             id_to_other[terminal.ID] = other_terminal
             level.update(terminal.parents)
             nodes.add(terminal)
@@ -1187,7 +1190,7 @@ def split_passage(passage, ends, remarks=False, ids=None):
                         e.tag != layer1.EdgeTags.Punctuation and e.parent not in nodes)
 
         other_l1 = layer1.Layer1(root=other, attrib=passage.layer(layer1.LAYER_ID).attrib.copy())
-        _copy_l1_nodes(passage, other, id_to_other, nodes, remarks=remarks)
+        _copy_l1_nodes(passage, other, id_to_other, set(nodes), remarks=remarks)
         attach_punct(other_l0, other_l1)
         for j, paragraph in enumerate(paragraphs, start=1):
             other_l0.doc(j)[:] = l0.doc(paragraph)
@@ -1251,7 +1254,7 @@ def _copy_l1_nodes(passage, other, id_to_other, include=None, remarks=False):
     while queue:
         node, other_node = queue.pop()
         if node.tag == layer1.NodeTags.Linkage:
-            if include is None or set(include).issuperset(node.children):
+            if include is None or include.issuperset(node.children):
                 linkages.append(node)
             continue
         if other_node is None:

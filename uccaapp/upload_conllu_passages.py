@@ -63,7 +63,7 @@ class ConlluPassageUploader(ServerAccessor):
         tok_user_task_in = dict(tok_task_out)
         passage = list(from_text(tokens, tokenized=True))[0]
         tok_user_task_in.update(to_json(passage, return_dict=True, tok_task=True))
-        self.submit_tokenization_task(**tok_user_task_in)
+        self.submit_task(**tok_user_task_in)
         task_in = dict(type="ANNOTATION", status="NOT_STARTED", project=self.project, user=self.annotation_user,
                        passage=tok_task_out["passage"], manager_comment="External ID: "+external_id,
                        user_comment=external_id, parent=tok_task_out, is_demo=False, is_active=True)
