@@ -107,7 +107,7 @@ class ServerAccessor:
 
     def create(self, data, prefix):
         logging.debug("Creating %s %s: %s" % (self.type(data), prefix, json.dumps(data)))
-        out = self.request("post", prefix + "/%s/" % data["id"], json=data).json()
+        out = self.request("post", prefix + "/", json=data).json()
         logging.debug("Created %s %s: %s" % (self.type(data), prefix, json.dumps(out)))
         return out
 
