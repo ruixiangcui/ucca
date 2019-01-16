@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-import argparse
-import json
 import sys
 
+import argparse
+import json
 from tqdm import tqdm
 
 from ucca import normalization, validation
@@ -48,9 +48,10 @@ class TaskDownloader(ServerAccessor):
             print(passage.ID, task_id, user_id, task["user_comment"], task["created_at"], task["updated_at"],
                   file=log, sep="\t", flush=True)
         ret = passage, task_id, user_id
-        if validate:
+        if validate or write_valid_only:
             for error in validation.validate(passage, linkage=False):
-                print(passage.ID, task_id, user_id, error, file=validate, sep="\t", flush=True)
+                if validate:
+                    print(passage.ID, task_id, user_id, error, file=validate, sep="\t", flush=True)
                 if write_valid_only:
                     return ret
         if write:
