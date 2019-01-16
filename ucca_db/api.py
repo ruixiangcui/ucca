@@ -84,7 +84,11 @@ def get_most_recent_passage_by_uid(uid, passage_id, host_name, db_name, verbose=
     del kwargs
     c = get_cursor(host_name, db_name)
     uid = (uid,) if isinstance(uid, (str, int)) else tuple(uid)
-    c.execute("SELECT xml,status,ts,id,uid FROM xmls WHERE uid IN %s AND paid = %s ORDER BY ts DESC", (uid, passage_id))
+    if "*" in uid:
+        c.execute("SELECT xml,status,ts,id,uid FROM xmls WHERE paid = %s ORDER BY ts DESC", (passage_id,))
+    else:
+        c.execute("SELECT xml,status,ts,id,uid FROM xmls WHERE uid IN %s AND paid = %s ORDER BY ts DESC",
+                  (uid, passage_id))
     queryset = c.fetchone()
     raw_xml, status, ts, xid, uid = 5 * [None]
     if queryset is None:
