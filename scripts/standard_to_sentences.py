@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-import sys
-from itertools import count
-
 import argparse
 import os
+import sys
+from itertools import count
 
 from ucca.convert import split2sentences, split_passage
 from ucca.ioutil import passage2file, get_passages_with_progress_bar, external_write_mode
@@ -22,6 +21,7 @@ class Splitter:
         self.suffix_format = suffix_format
         self.suffix_start = suffix_start
         self.index = 0
+        self.matched_indices = set()
 
     @classmethod
     def read_file(cls, filename, **kwargs):
@@ -46,6 +46,7 @@ class Splitter:
             else:
                 index = self.index = self.sentence_to_index.get(sentence)
             if index is not None:
+                self.matched_indices.add(index)
                 ends.append(terminal.position)
                 ids.append(str(index))
                 tokens = []
@@ -70,6 +71,9 @@ def main(args):
             if args.normalize:
                 normalize(sentence)
             passage2file(sentence, outfile, binary=args.binary)
+    if splitter and len(splitter.matched_indices) < len(splitter.sentences):
+        print("Unmatched sentences:", *[s for i, s in enumerate(splitter.sentences)
+                                        if i not in splitter.matched_indices], sep="\n")
 
 
 if __name__ == "__main__":
