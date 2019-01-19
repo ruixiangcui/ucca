@@ -701,7 +701,7 @@ def from_standard(root, extra_funcs=None):
         if not categories:  # an old xml format
             tag = edge_elem.get('type')
             categories.append((tag, "", "", ""))
-        edge = from_node.add(categories, to_node, edge_attrib=_get_attrib(edge_elem))
+        edge = from_node.add_multiple(categories, to_node, edge_attrib=_get_attrib(edge_elem))
         _add_extra(edge, edge_elem)
 
     return passage
@@ -843,7 +843,7 @@ def get_categories_details(d):
     while curr_layer:
         base_layer = curr_layer['name']
         for c in curr_layer['categories']:
-            categories[c['id']] = {'name': c["name"], 'parent': c['parent'] if 'parent' in c else None, 'layer': base_layer}
+            categories[c['id']] = {'name': c["name"], 'parent': c.get("parent"), 'layer': base_layer}
         curr_layer = curr_layer['parent']
     return base_layer, categories
 
@@ -914,13 +914,14 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
             except KeyError as e:
                 raise ValueError("Category missing from layer: " + category["id"]) from e
             c_tag = category_name_to_edge_tag.get(category_name.replace(" ", ""), category_name.replace(" ", "_"))
-            c_slot = category["slot"] if 'slot' in category else ""
-            c_layer = categories[category["id"]]['layer']
+            c_slot = category.get("slot", "")
+            c_data = categories[category["id"]]
+            c_layer = c_data['layer']
             if c_layer == base_layer:
                 base_slot = c_slot
-            c_parent = categories[category["id"]]['parent']
+            c_parent = c_data['parent']
             if c_parent:   # make sure it is not empty
-                c_parent = c_parent['name']
+                c_parent = category_name_to_edge_tag.get(c_parent['name'].replace(" ", ""), c_parent['name'].replace(" ", "_"))
             unit_categories.append((c_tag, c_slot, c_layer, c_parent))
 
         if not unit_categories:
@@ -938,11 +939,11 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
             except KeyError as e:
                 raise ValueError("Remote copy %s refers to nonexistent unit: %s" %
                                  (tree_id, cloned_from_tree_id)) from e
-            l1.add_remote(parent_node, unit_categories, node)
+            l1.add_remote_multiple(parent_node, unit_categories, node)
         elif not skip_category_mapping and terminal and layer0.is_punct(terminal):
             tree_id_to_node[tree_id] = l1.add_punct(None, terminal, base_layer, base_slot)
         elif tree_id not in tree_id_to_node:
-            node = tree_id_to_node[tree_id] = l1.add_fnode(parent_node, unit_categories, implicit=(unit["type"] == "IMPLICIT"))
+            node = tree_id_to_node[tree_id] = l1.add_fnode_multiple(parent_node, unit_categories, implicit=(unit["type"] == "IMPLICIT"))
             node.extra['tree_id'] = tree_id
             comment = unit.get("comment")
             if comment:
@@ -954,7 +955,7 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
     for token_id, node in token_id_to_preterminal.items():
         terminal = token_id_to_terminal[token_id]
         if skip_category_mapping or not layer0.is_punct(terminal):
-            node.add([(EdgeTags.Terminal, base_slot, base_layer, "")], terminal)
+            node.add(EdgeTags.Terminal, terminal)
 
     return passage
 
@@ -1268,7 +1269,7 @@ def _copy_l1_nodes(passage, other, id_to_other, include=None, remarks=False):
                     continue
                 if edge.child.layer.ID == layer0.LAYER_ID:
                     edge_categories = [(c.tag, c.slot, c.layer, c.parent) for c in edge.categories]
-                    other_node.add(edge_categories, id_to_other[edge.child.ID])
+                    other_node.add_multiple(edge_categories, id_to_other[edge.child.ID])
                     continue
                 if edge.child.tag == layer1.NodeTags.Punctuation:
                     grandchild = edge.child.children[0]
@@ -1276,22 +1277,22 @@ def _copy_l1_nodes(passage, other, id_to_other, include=None, remarks=False):
                     other_child.incoming[0].categories = edge.categories
                 else:
                     edge_categories = [(c.tag, c.slot, c.layer, c.parent) for c in edge.categories]
-                    other_child = other_l1.add_fnode(other_node, edge_categories, implicit=edge.child.attrib.get("implicit"))
+                    other_child = other_l1.add_fnode_multiple(other_node, edge_categories, implicit=edge.child.attrib.get("implicit"))
                     queue.append((edge.child, other_child))
                 id_to_other[edge.child.ID] = other_child
                 _copy_extra(edge.child, other_child, remarks)  # Add remotes
             elif is_remote:  # Cross-paragraph remote edge -> create implicit child instead
                 edge_categories = [(c.tag, c.slot, c.layer, c.parent) for c in edge.categories]
-                other_l1.add_fnode(other_node, edge_categories, implicit=True)
+                other_l1.add_fnode_multiple(other_node, edge_categories, implicit=True)
     for edge, parent in remotes:
         other_child = id_to_other.get(edge.child.ID)
         edge_categories = [(c.tag, c.slot, c.layer, c.parent) for c in edge.categories]
         if other_child is None:  # Promote remote edge to primary if the original primary parent is gone due to split
             id_to_other[edge.child.ID] = other_child = \
-                other_l1.add_fnode(parent, edge_categories, implicit=edge.child.attrib.get("implicit"))
+                other_l1.add_fnode_multiple(parent, edge_categories, implicit=edge.child.attrib.get("implicit"))
             _copy_extra(edge.child, other_child, remarks)
         else:
-            other_l1.add_remote(parent, edge_categories, other_child)
+            other_l1.add_remote_multiple(parent, edge_categories, other_child)
     # Add linkages
     for linkage in linkages:
         try:

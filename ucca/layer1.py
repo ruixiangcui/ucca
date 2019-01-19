@@ -433,7 +433,7 @@ class Layer1(core.Layer):
             except KeyError:
                 return id_str
 
-    def add_fnode(self, parent, edge_categories, *, implicit=False):
+    def add_fnode_multiple(self, parent, edge_categories, *, implicit=False):
         """Adds a new :class:`FNode` whose parent and Edge tag are given.
 
         :param parent: the FNode which will be the parent of the new FNode.
@@ -451,10 +451,13 @@ class Layer1(core.Layer):
         fnode = FoundationalNode(root=self.root, tag=NodeTags.Foundational,
                                  ID=self.next_id(), attrib=node_attrib)
         if edge_categories:
-            parent.add(edge_categories, fnode)
+            parent.add_multiple(edge_categories, fnode)
         return fnode
 
-    def add_remote(self, parent, edge_categories, child):
+    def add_fnode(self, parent, tag, *, implicit=False):
+        return self.add_fnode_multiple(parent, [(tag,)], implicit=implicit)
+
+    def add_remote_multiple(self, parent, edge_categories, child):
         """Adds a new :class:`core`.Edge with remote attribute between the nodes.
 
         :param parent: the parent of the remote Edge
@@ -463,9 +466,12 @@ class Layer1(core.Layer):
 
         :raise core.FrozenPassageError if the Passage is frozen
         """
-        parent.add(edge_categories, child, edge_attrib={'remote': True})
+        return parent.add_multiple(edge_categories, child, edge_attrib={'remote': True})
 
-    def add_punct(self, parent, terminal, layer=None, slot=None):
+    def add_remote(self, parent, tag, child):
+        return self.add_remote_multiple(parent, [(tag,)], child)
+
+    def add_punct(self, parent, terminal, layer= None, slot= None):
         """Adds a PunctNode as the child of parent and the Terminal under it.
 
         :param parent: the parent of the newly created PunctNode. If None, adds
@@ -481,11 +487,11 @@ class Layer1(core.Layer):
             parent = self._head_fnode
         punct_node = PunctNode(root=self.root, tag=NodeTags.Punctuation,
                                ID=self.next_id())
-        parent.add([(EdgeTags.Punctuation, slot, layer, "")], punct_node)
-        punct_node.add([(EdgeTags.Terminal, slot, layer, "")], terminal)
+        parent.add_multiple([(EdgeTags.Punctuation, slot, layer)], punct_node)
+        punct_node.add_multiple([(EdgeTags.Terminal, slot, layer)], terminal)
         return punct_node
 
-    def add_linkage(self, relation, layer, slot, *args):
+    def add_linkage(self, relation, *args):
         """Adds a Linkage between the link relation and the linked arguments.
 
         Linkage objects are all heads and have no parents.
@@ -500,9 +506,9 @@ class Layer1(core.Layer):
         """
         linkage = Linkage(root=self.root, tag=NodeTags.Linkage,
                           ID=self.next_id())
-        linkage.add([(EdgeTags.LinkRelation, slot, layer, "")], relation)
+        linkage.add(EdgeTags.LinkRelation, relation)
         for arg in args:
-            linkage.add([(EdgeTags.LinkArgument, slot, layer, "")], arg)
+            linkage.add(EdgeTags.LinkArgument, arg)
         return linkage
 
     def _check_top_scene(self, node):

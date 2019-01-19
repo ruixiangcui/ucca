@@ -152,9 +152,10 @@ def test_site_discontiguous_with_implicit():
 
 def test_to_standard():
     passage = convert.from_site(load_xml("test_files/site3.xml"))
-    ref = load_xml("test_files/standard3.xml")
+    ref = load_xml("test_files/standard3.xml")  # old format of xml
+    new_ref = convert.to_standard(convert.from_standard(ref))   # converting to the new xml format
     root = convert.to_standard(passage)
-    assert ETree.tostring(ref) == ETree.tostring(root)
+    assert ETree.tostring(new_ref) == ETree.tostring(root)
 
 
 def test_from_standard():

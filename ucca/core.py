@@ -193,7 +193,7 @@ class Category:
     information.
     """
 
-    def __init__(self, tag, slot=None, layer=None, parent=None, attrib=None):
+    def __init__(self, tag, slot=None, layer=None, parent=None):
         self._tag = tag
         self._slot = slot if slot else ""
         self._layer = layer if layer else ""
@@ -203,6 +203,10 @@ class Category:
     @property
     def tag(self):
         return self._tag
+
+    @tag.setter
+    def tag(self, new_tag):
+        self._tag = new_tag
 
     @property
     def slot(self):
@@ -231,7 +235,7 @@ class Edge:
     An edge between Nodes in a :class:`Passage` is a simple object; it is a
     directed edge whose ID is derived by the parent and child of the edge,
     it is mostly immutable except for its attributes, and it is labeled with
-    the connection type between the Nodes. an edge can have multiple annotations, representing
+    the connection type between the Nodes. An edge can have multiple annotations, representing
     connection types of one or more layers.
 
     Attributes:
@@ -244,14 +248,14 @@ class Edge:
         child: the target Node of the Edge
         categories: a list of categories for this edge
         ID_FORMAT: format string which creates the ID of the Edge from
-            the IDs of the parent (first argument to the formattinf string)
+            the IDs of the parent (first argument to the formatting string)
             and the child (second argument).
 
     """
 
     ID_FORMAT = "{}->{}"
 
-    def __init__(self, root, parent, child, attrib=None):
+    def __init__(self, root, parent, child, tag=None, attrib=None):
         """Creates a new :class:`Edge` object.
 
         :param see :class:`Edge` documentation.
@@ -266,18 +270,22 @@ class Edge:
         self._parent = parent
         self._child = child
         self._attrib = _AttributeDict(root, attrib)
-        self._categories = []
+        self._categories = [Category(tag)] if tag else []
         self.extra = {}
 
     @property
     def tag(self):
         return self._categories[0].tag
 
+    #@tag.setter
+    #def tag(self, new_tag):
+    #    self._categories[0].tag = new_tag
+
     @tag.setter
     @ModifyPassage
     def tag(self, new_tag):
-        old_tag = self._tag
-        self._tag = new_tag
+        old_tag = self.tag
+        self._categories[0].tag = new_tag
         self._root._change_edge_tag(self, old_tag)
 
     @property
@@ -294,8 +302,7 @@ class Edge:
 
     @categories.setter
     def categories(self, new_categories):
-        for category in new_categories:
-            self.add(category.tag, category.slot, category.layer, category.parent)
+        self._categories = new_categories
 
     @property
     def child(self):
@@ -336,10 +343,14 @@ class Edge:
                                   ignore_node=ignore_node, ignore_edge=ignore_edge))
 
     @ModifyPassage
-    def add(self, tag, slot, layer, parent):
+    def add(self, tag, slot="", layer="", parent=""):
         """ adds a new category to the edge"""
         c = Category(tag, slot, layer, parent)
         self._categories.append(c)
+        if c.tag not in self.root.categories:
+            self.root._update_categories(c)
+        if c.parent and c.parent not in self.root.refined_categories:
+            self.root._update_refined_categories(c.parent)
         return c
 
     def __repr__(self):
@@ -347,19 +358,6 @@ class Edge:
 
     def __getitem__(self, index):
         return self._categories[index]
-
-    def iter(self):
-        """Iterates the :class:`Edge` objects in the subtree of self.
-
-        :param obj: yield Category objects
-
-        Yields:
-            a :class:`Node` or :class:`Edge` object according to the iteration
-            parameters.
-
-        """
-        for category in self._categories:
-            yield category
 
 
 class Node:
@@ -472,11 +470,11 @@ class Node:
         return Node.__name__ + "(" + self.ID + ")"
 
     @ModifyPassage
-    def add(self, edge_categories, node, *, edge_attrib=None):
+    def add_multiple(self, edge_categories, node, *, edge_attrib=None):
         """Adds another :class:`Node` object as a child of self.
 
-        :param edge_categories: the labels of the :class:`Edge` connecting between the
-                Nodes
+        :param edge_categories: a list of 4-tuples representing the categories on this edge of the :class:`Edge`
+                connecting between the Nodes
             node: the Node object which we want to have an Edge to
             edge_attrib: Keyword only, dictionary of attributes to be passed
                 to the Edge initializer.
@@ -490,17 +488,32 @@ class Node:
         edge = Edge(root=self._root, parent=self,
                     child=node, attrib=edge_attrib)
         for category in edge_categories:
-            c = edge.add(*category)
-            if c.tag not in self.root.categories:
-                self.root._update_categories(c)
-            if not c.parent and c.tag not in self.root.refined_categories and len(edge_categories) > 1:
-                self.root._update_refined_categories(c.tag)
+            edge.add(*category)
         self._outgoing.append(edge)
         self._outgoing.sort(key=self._orderkey)
         node._incoming.append(edge)
         node._incoming.sort(key=node._orderkey)
         self.root._add_edge(edge)
         return edge
+
+    @ModifyPassage
+    def add(self, tag, node, *, edge_attrib=None):
+        """Adds another :class:`Node` object as a child of self.
+
+        :param edge_categories: a list of 4-tuples representing the categories on this edge of the :class:`Edge`
+                connecting between the Nodes
+            node: the Node object which we want to have an Edge to
+            edge_attrib: Keyword only, dictionary of attributes to be passed
+                to the Edge initializer.
+
+        :return: the newly created Edge object
+
+        :raise FrozenPassageError: if the :class:`Passage` object we are part of
+                is frozen and can't be modified.
+
+        """
+        return self.add_multiple([(tag, )], node, edge_attrib=edge_attrib)
+
 
     @ModifyPassage
     def remove(self, edge_or_node):
@@ -911,7 +924,7 @@ class Passage:
 
     @property
     def categories(self):
-        return self._categories
+        return self._categories.copy()
 
     @property
     def refined_categories(self):
