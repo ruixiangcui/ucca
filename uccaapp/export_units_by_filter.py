@@ -8,6 +8,7 @@ CONSECUTIVE = "CONSECUTIVE"
 SUBSEQUENCE = "SUBSEQUENCE"
 SUBSET = "SUBSET"
 
+
 def get_top_level_ancestor(node):
     """
     Traverses the passage upwards until a unit which is immediately below the root is reached
@@ -22,6 +23,7 @@ def get_top_level_ancestor(node):
         while parent.fparent.fparent:
             parent = parent.fparent
         return parent
+
 
 def tokens_match(tokens1, tokens2, mode):
     """
@@ -46,8 +48,6 @@ def tokens_match(tokens1, tokens2, mode):
             return False
 
 
-
-
 def main(output = None, comment = False, sentence_level = False, categories = (), tokens = (), tokens_mode = CONSECUTIVE,
          case_insensitive = False, write = False, **kwargs):
     filtered_nodes = []
@@ -65,7 +65,7 @@ def main(output = None, comment = False, sentence_level = False, categories = ()
                 if case_insensitive:
                     unit_tokens = [x.lower() for x in unit_tokens]
                     tokens = [x.lower() for x in tokens]
-                if tokens_match(unit_tokens,tokens,tokens_mode):
+                if tokens_match(unit_tokens, tokens, tokens_mode):
                     filtered_nodes.append(('TOKENS', node, task_id, user_id))
             else:
                 all_tags = []
@@ -77,11 +77,12 @@ def main(output = None, comment = False, sentence_level = False, categories = ()
                         filtered_nodes.append((str(list(intersection)), node, task_id, user_id))
 
     if output:
-        with open(output,'w') as f:
+        with open(output, 'w') as f:
             for filter_type,node,task_id,user_id in filtered_nodes:
                 ancestor = get_top_level_ancestor(node)
                 print(filter_type, task_id, user_id, node.extra.get("tree_id"), node.to_text(),
                       ancestor, str(node.extra.get("remarks")).replace("\n","|"), file=f, sep="\t")
+
 
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser(description=desc)
