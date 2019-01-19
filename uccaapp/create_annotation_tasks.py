@@ -26,7 +26,7 @@ class AnnotationTaskCreator(ServerAccessor):
 
     def build_task(self, user_id, task_id, review=False, manager_comment=None, **kwargs):
         del kwargs
-        user = self.get_task(user_id)
+        user = self.get_user(user_id)
         task = self.get_task(task_id)
         assert task["type"] in (["ANNOTATION", "REVIEW"] if review else ["TOKENIZATION"]), \
             "Wrong input task given: %s for task ID %s" % (task["type"], task_id)
