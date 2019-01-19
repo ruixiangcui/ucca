@@ -277,10 +277,6 @@ class Edge:
     def tag(self):
         return self._categories[0].tag
 
-    #@tag.setter
-    #def tag(self, new_tag):
-    #    self._categories[0].tag = new_tag
-
     @tag.setter
     @ModifyPassage
     def tag(self, new_tag):
