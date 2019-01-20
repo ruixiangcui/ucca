@@ -530,8 +530,8 @@ class Node:
             try:
                 edge = [edge for edge in self._outgoing
                         if edge.child == edge_or_node][0]
-            except IndexError:
-                raise MissingNodeError(edge_or_node)
+            except IndexError as e:
+                raise MissingNodeError(edge_or_node) from e
         else:  # an Edge object
             edge = edge_or_node
 
@@ -539,8 +539,8 @@ class Node:
             self._outgoing.remove(edge)
             edge.child._incoming.remove(edge)
             self.root._remove_edge(edge)
-        except ValueError:
-            raise MissingNodeError(edge_or_node)
+        except ValueError as e:
+            raise MissingNodeError(edge_or_node) from e
 
     @property
     def orderkey(self):
@@ -1006,8 +1006,8 @@ class Passage:
         for lid in layers:
             try:
                 self.layer(lid).copy(other)
-            except AttributeError:
-                raise UnimplementedMethodError()
+            except AttributeError as e:
+                raise UnimplementedMethodError() from e
         other.frozen = self.frozen
         return other
 
