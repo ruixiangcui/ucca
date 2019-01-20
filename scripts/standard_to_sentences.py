@@ -34,23 +34,24 @@ class Splitter:
     def split(self, passage):
         ends = []
         ids = []
-        tokens = []
+        token_lists = []
         for terminal in extract_terminals(passage):
-            tokens.append(terminal.text)
-            sentence = " ".join(tokens)
-            # if len(tokens) > max(map(len, map(str.split, sentence_to_index))):
-            #     raise ValueError("Failed matching '%s'" % sentence)
-            if self.index is not None and self.index < len(self.sentences) and \
-                    self.sentences[self.index].startswith(sentence):  # Try matching next sentence rather than shortest
-                index = self.index if self.sentences[self.index] == sentence else None
-            else:
-                index = self.index = self.sentence_to_index.get(sentence)
-            if index is not None:
-                self.matched_indices.add(index)
-                ends.append(terminal.position)
-                ids.append(str(index))
-                tokens = []
-                self.index += 1
+            token_lists.append([])
+            for tokens in token_lists:
+                tokens.append(terminal.text)
+                sentence = " ".join(tokens)
+                if self.index is not None and self.index < len(self.sentences) and self.sentences[
+                        self.index].startswith(sentence):  # Try matching next sentence rather than shortest
+                    index = self.index if self.sentences[self.index] == sentence else None
+                else:
+                    index = self.index = self.sentence_to_index.get(sentence)
+                if index is not None:
+                    self.matched_indices.add(index)
+                    ends.append(terminal.position)
+                    ids.append(str(index))
+                    token_lists = []
+                    self.index += 1
+                    break
         return split_passage(passage, ends, ids=ids if self.enumerate else None,
                              suffix_format=self.suffix_format, suffix_start=self.suffix_start)
 
@@ -72,8 +73,8 @@ def main(args):
                 normalize(sentence)
             passage2file(sentence, outfile, binary=args.binary)
     if splitter and len(splitter.matched_indices) < len(splitter.sentences):
-        print("Unmatched sentences:", *[s for i, s in enumerate(splitter.sentences)
-                                        if i not in splitter.matched_indices], sep="\n")
+        print("", "Unmatched sentences:", *[s for i, s in enumerate(splitter.sentences)
+                                            if i not in splitter.matched_indices], sep="\n")
 
 
 if __name__ == "__main__":
