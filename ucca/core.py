@@ -10,7 +10,6 @@ are connected between themselves and to Nodes in other layers using
 
 import functools
 
-
 # Max number of digits allowed for a unique ID
 UNIQUE_ID_MAX_DIGITS = 5
 
@@ -120,11 +119,13 @@ class ModifyPassage:
         :raise FrozenPassageError: if the :class:`Passage` is frozen and can't be
                 modified.
         """
+
         @functools.wraps(self.fn)
         def decorated(*args, **kwargs):
             if args[0].root.frozen:
                 raise FrozenPassageError(args[0].root.ID)
             return self.fn(*args, **kwargs)
+
         return decorated(*args, **kwargs)
 
 
@@ -157,8 +158,10 @@ class _AttributeDict:
         :param other: AttributeDict to compare to
         :return: True iff the dictionaries are equal.
         """
+
         def omit_irrelevant(d):
             return {k: v for k, v in d.items() if k not in IRRELEVANT_ATTRIBUTES}
+
         return omit_irrelevant(self._dict) == omit_irrelevant(other._dict)
 
     @property
@@ -226,7 +229,6 @@ class Category:
 
     def to_xml(self):
         pass
-
 
 
 class Edge:
@@ -508,8 +510,7 @@ class Node:
                 is frozen and can't be modified.
 
         """
-        return self.add_multiple([(tag, )], node, edge_attrib=edge_attrib)
-
+        return self.add_multiple([(tag,)], node, edge_attrib=edge_attrib)
 
     @ModifyPassage
     def remove(self, edge_or_node):
@@ -594,8 +595,8 @@ class Node:
         edges, other_edges = [[edge for edge in node
                                if (ignore_node is None or
                                    not ignore_node(edge.child)) and (
-                                   ignore_edge is None or
-                                   not ignore_edge(edge))]
+                                       ignore_edge is None or
+                                       not ignore_edge(edge))]
                               for node in (self, other)]
         if len(edges) != len(other_edges):
             return False  # not necessary, but gives better performance
