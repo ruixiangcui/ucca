@@ -63,7 +63,7 @@ def test_site_simple():
     linker = head.children[9]
     _test_edges(linker, [layer1.EdgeTags.Center,
                          layer1.EdgeTags.Elaborator])
-    assert linker.extra["remarks"], '"remark"'
+    assert linker.extra["remarks"], 'remark'
     center = linker.children[0]
     elab = linker.children[1]
     _test_terms(center, terms[0:1])
