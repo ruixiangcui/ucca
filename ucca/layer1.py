@@ -9,7 +9,6 @@ the type of relation between the Nodes.
 """
 
 import itertools
-
 import operator
 
 from ucca import core, layer0
@@ -78,7 +77,7 @@ def _single_child_by_tag(node, tag, must=True):
 
     """
     for edge in node:
-        if edge.tag == tag:
+        if any(category.tag == tag for category in edge):
             return edge.child
     if must:
         raise MissingRelationError(node.ID, tag)
@@ -96,7 +95,7 @@ def _multiple_children_by_tag(node, tag):
         A list of connected Nodes, can be empty
 
     """
-    return [edge.child for edge in node if edge.tag == tag]
+    return [edge.child for edge in node if any(category.tag == tag for category in edge)]
 
 
 class Linkage(core.Node):
