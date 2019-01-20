@@ -287,6 +287,10 @@ class Edge:
         self._root._change_edge_tag(self, old_tag)
 
     @property
+    def tags(self):
+        return [category.tag for category in self._categories]
+
+    @property
     def root(self):
         return self._root
 

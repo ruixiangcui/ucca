@@ -77,7 +77,7 @@ def _single_child_by_tag(node, tag, must=True):
 
     """
     for edge in node:
-        if any(category.tag == tag for category in edge):
+        if tag in edge.tags:
             return edge.child
     if must:
         raise MissingRelationError(node.ID, tag)
@@ -95,7 +95,7 @@ def _multiple_children_by_tag(node, tag):
         A list of connected Nodes, can be empty
 
     """
-    return [edge.child for edge in node if any(category.tag == tag for category in edge)]
+    return [edge.child for edge in node if tag in edge.tags]
 
 
 class Linkage(core.Node):
