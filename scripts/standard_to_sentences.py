@@ -37,9 +37,9 @@ class Splitter:
         token_lists = []
         for terminal in extract_terminals(passage):
             token_lists.append([])
-            for tokens in token_lists:
-                tokens.append(terminal.text)
-                sentence = " ".join(tokens)
+            for terminals in token_lists:
+                terminals.append(terminal)
+                sentence = " ".join(t.text for t in terminals)
                 if self.index is not None and self.index < len(self.sentences) and self.sentences[
                         self.index].startswith(sentence):  # Try matching next sentence rather than shortest
                     index = self.index if self.sentences[self.index] == sentence else None
@@ -47,6 +47,9 @@ class Splitter:
                     index = self.index = self.sentence_to_index.get(sentence)
                 if index is not None:
                     self.matched_indices.add(index)
+                    last_end = terminals[0].position - 1
+                    if len(terminals) > 1 and last_end and last_end not in ends:
+                        ends.append(last_end)
                     ends.append(terminal.position)
                     ids.append(str(index))
                     token_lists = []
