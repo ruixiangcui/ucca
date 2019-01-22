@@ -17,7 +17,9 @@ desc = """Parses XML files in UCCA standard format, and writes a passage per sen
 class Splitter:
     def __init__(self, sentences, enum=False, suffix_format="%03d", suffix_start=0):
         self.sentences = sentences
-        self.sentence_to_index = dict(map(reversed, enumerate(sentences)))
+        self.sentence_to_index = {}
+        for i, sentence in enumerate(sentences):
+            self.sentence_to_index.setdefault(sentence, []).append(i)
         self.enumerate = enum
         self.suffix_format = suffix_format
         self.suffix_start = suffix_start
@@ -38,14 +40,15 @@ class Splitter:
         token_lists = []
         for terminal in extract_terminals(passage):
             token_lists.append([])
-            for terminals in token_lists:
+            for terminals in token_lists if self.index is None else [token_lists[0]]:
                 terminals.append(terminal)
                 sentence = " ".join(t.text for t in terminals)
                 if self.index is not None and self.index < len(self.sentences) and self.sentences[
                         self.index].startswith(sentence):  # Try matching next sentence rather than shortest
                     index = self.index if self.sentences[self.index] == sentence else None
                 else:
-                    index = self.index = self.sentence_to_index.get(sentence)
+                    indices = self.sentence_to_index.get(sentence)
+                    index = self.index = indices.pop(0) if indices else None
                 if index is not None:
                     self.matched_indices.add(index)
                     last_end = terminals[0].position - 1
