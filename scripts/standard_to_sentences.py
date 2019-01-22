@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-import argparse
-import os
 import sys
 from itertools import count
+
+import argparse
+import os
 
 from ucca.convert import split2sentences, split_passage
 from ucca.ioutil import passage2file, get_passages_with_progress_bar, external_write_mode
@@ -71,6 +72,7 @@ def main(args):
             outfile = os.path.join(args.outdir, args.prefix + sentence.ID + (".pickle" if args.binary else ".xml"))
             if args.verbose:
                 with external_write_mode():
+                    print(sentence, file=sys.stderr)
                     print("Writing passage file for sentence '%s'..." % outfile, file=sys.stderr)
             if args.normalize:
                 normalize(sentence)
