@@ -6,6 +6,7 @@ v1.3
 2017-01-16: fix bug in moving common Fs
 2018-04-12: exclude punctuation nodes regardless of edge tag
 2018-12-11: fix another bug in moving common Fs
+2019-01-22: support multiple categories per edge
 """
 from collections import Counter, OrderedDict
 from itertools import groupby
@@ -94,7 +95,7 @@ class Evaluator:
             if eval_type == UNLABELED:
                 mutual_tags[y] = ()
             else:
-                tags = [set(c.edge.tag for c in m[y]) for m in (m1, m2)]
+                tags = [set(t for c in m[y] for t in c.edge.tags) for m in (m1, m2)]
                 if eval_type == WEAK_LABELED:
                     tags[0] = expand_equivalents(tags[0])
                 intersection = set.intersection(*tags)
@@ -102,7 +103,8 @@ class Evaluator:
                     mutual_tags[y] = intersection
         if counter is not None:
             for y in m1.keys() | m2.keys():
-                tags = [sorted(set(c.edge.tag for c in m.get(y, ()) if not c.is_unary_child)) for m in (m1, m2)]
+                tags = [sorted(set(t for c in m.get(y, ()) if not c.is_unary_child for t in c.edge.tags))
+                        for m in (m1, m2)]
                 counter[tuple("|".join(t) or "<UNMATCHED>" for t in tags)] += 1
 
     def get_scores(self, p1, p2, eval_type, r=None):
