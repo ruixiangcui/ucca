@@ -9,6 +9,7 @@ the type of relation between the Nodes.
 """
 
 import itertools
+
 import operator
 
 from ucca import core, layer0
@@ -432,13 +433,15 @@ class Layer1(core.Layer):
             except KeyError:
                 return id_str
 
-    def add_fnode_multiple(self, parent, edge_categories, *, implicit=False):
+    def add_fnode_multiple(self, parent, edge_categories, *, implicit=False, edge_attrib=None):
         """Adds a new :class:`FNode` whose parent and Edge tag are given.
 
         :param parent: the FNode which will be the parent of the new FNode.
                 If the parent is None, adds under the layer head FNode.
         :param edge_categories: list of categories on the Edge between the parent and the new FNode.
         :param implicit: whether to set the new FNode as implicit (default False)
+        :param edge_attrib: Keyword only, dictionary of attributes to be passed
+                to the Edge initializer.
 
         :return: the newly created FNode
 
@@ -450,32 +453,39 @@ class Layer1(core.Layer):
         fnode = FoundationalNode(root=self.root, tag=NodeTags.Foundational,
                                  ID=self.next_id(), attrib=node_attrib)
         if edge_categories:
-            parent.add_multiple(edge_categories, fnode)
+            parent.add_multiple(edge_categories, fnode, edge_attrib=edge_attrib)
         return fnode
 
     def add_fnode(self, parent, tag, *, implicit=False):
         return self.add_fnode_multiple(parent, [(tag,)], implicit=implicit)
 
-    def add_remote_multiple(self, parent, edge_categories, child):
+    def add_remote_multiple(self, parent, edge_categories, child, edge_attrib=None):
         """Adds a new :class:`core`.Edge with remote attribute between the nodes.
 
         :param parent: the parent of the remote Edge
         :param edge_categories: list of categories of the Edge
         :param child: the child of the remote Edge
+        :param edge_attrib: Keyword only, dictionary of attributes to be passed
+                to the Edge initializer.
 
         :raise core.FrozenPassageError if the Passage is frozen
         """
-        return parent.add_multiple(edge_categories, child, edge_attrib={'remote': True})
+        if edge_attrib is None:
+            edge_attrib = {}
+        edge_attrib["remote"] = True
+        return parent.add_multiple(edge_categories, child, edge_attrib=edge_attrib)
 
     def add_remote(self, parent, tag, child):
         return self.add_remote_multiple(parent, [(tag,)], child)
 
-    def add_punct(self, parent, terminal, layer= None, slot= None):
+    def add_punct(self, parent, terminal, layer=None, slot=None, edge_attrib=None):
         """Adds a PunctNode as the child of parent and the Terminal under it.
 
         :param parent: the parent of the newly created PunctNode. If None, adds
                 under rhe layer head FNode.
         :param terminal: the punctuation Terminal we want to put under parent.
+        :param edge_attrib: Keyword only, dictionary of attributes to be passed
+                to the Edge initializer.
 
         :return: the newly create PunctNode.
 
@@ -486,7 +496,7 @@ class Layer1(core.Layer):
             parent = self._head_fnode
         punct_node = PunctNode(root=self.root, tag=NodeTags.Punctuation,
                                ID=self.next_id())
-        parent.add_multiple([(EdgeTags.Punctuation, slot, layer)], punct_node)
+        parent.add_multiple([(EdgeTags.Punctuation, slot, layer)], punct_node, edge_attrib=edge_attrib)
         punct_node.add_multiple([(EdgeTags.Terminal, slot, layer)], terminal)
         return punct_node
 

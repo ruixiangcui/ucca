@@ -936,6 +936,7 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
         if not unit_categories:
             raise ValueError("Unit %s has no categories" % tree_id)
 
+        edge_attrib = {"uncertain": True} if any(uc[0] == EdgeTags.Uncertain for uc in unit_categories) else None
         unit_categories = [uc for uc in unit_categories if uc[0] not in IGNORED_ABBREVIATIONS]
         children_tokens = [] if unit["type"] == "IMPLICIT" else unit["children_tokens"]
         try:
@@ -948,12 +949,13 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
             except KeyError as e:
                 raise ValueError("Remote copy %s refers to nonexistent unit: %s" %
                                  (tree_id, cloned_from_tree_id)) from e
-            l1.add_remote_multiple(parent_node, unit_categories, node)
+            l1.add_remote_multiple(parent_node, unit_categories, node, edge_attrib=edge_attrib)
         elif not skip_category_mapping and terminal and layer0.is_punct(terminal):
-            tree_id_to_node[tree_id] = l1.add_punct(None, terminal, base_layer, base_slot)
+            tree_id_to_node[tree_id] = l1.add_punct(None, terminal, base_layer, base_slot, edge_attrib=edge_attrib)
         elif tree_id not in tree_id_to_node:
             node = tree_id_to_node[tree_id] = l1.add_fnode_multiple(parent_node, unit_categories,
-                                                                    implicit=unit["type"] == "IMPLICIT")
+                                                                    implicit=unit["type"] == "IMPLICIT",
+                                                                    edge_attrib=edge_attrib)
             node.extra['tree_id'] = tree_id
             comment = unit.get("comment")
             if comment:

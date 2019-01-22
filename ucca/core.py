@@ -477,8 +477,8 @@ class Node:
 
         :param edge_categories: a list of 4-tuples representing the categories on this edge of the :class:`Edge`
                 connecting between the Nodes
-            node: the Node object which we want to have an Edge to
-            edge_attrib: Keyword only, dictionary of attributes to be passed
+        :param node: the Node object which we want to have an Edge to
+        :param edge_attrib: Keyword only, dictionary of attributes to be passed
                 to the Edge initializer.
 
         :return: the newly created Edge object
