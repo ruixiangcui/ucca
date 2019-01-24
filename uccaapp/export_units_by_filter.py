@@ -49,7 +49,13 @@ def tokens_match(tokens1, tokens2, mode):
 
 
 def main(output = None, comment = False, sentence_level = False, categories = (), tokens = (), tokens_mode = CONSECUTIVE,
-         case_insensitive = False, write = False, **kwargs):
+         case_insensitive = False, tokens_by_file = False, write = False, **kwargs):
+    if tokens_by_file:
+        with open(tokens[0]) as f:
+            token_lists = [line.strip().split() for line in f]
+    else:
+        token_lists = [tokens]
+
     filtered_nodes = []
     for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(write=False, **kwargs):
         if sentence_level:
@@ -60,13 +66,14 @@ def main(output = None, comment = False, sentence_level = False, categories = ()
         for node in all_nodes:
             if comment and node.extra.get("remarks"):
                 filtered_nodes.append(("comment",node,task_id,user_id))
-            if tokens and not node.attrib.get("implicit"):
-                unit_tokens = [t.text for t in node.get_terminals(punct=True)]
-                if case_insensitive:
-                    unit_tokens = [x.lower() for x in unit_tokens]
-                    tokens = [x.lower() for x in tokens]
-                if tokens_match(unit_tokens, tokens, tokens_mode):
-                    filtered_nodes.append(('TOKENS', node, task_id, user_id))
+            if token_lists and not node.attrib.get("implicit"):
+                for token_list in token_lists:
+                    unit_tokens = [t.text for t in node.get_terminals(punct=True)]
+                    if case_insensitive:
+                        unit_tokens = [x.lower() for x in unit_tokens]
+                        token_list = [x.lower() for x in token_list]
+                    if tokens_match(unit_tokens, token_list, tokens_mode):
+                        filtered_nodes.append(('TOKENS', node, task_id, user_id))
             else:
                 all_tags = []
                 for edge in node:
@@ -91,6 +98,8 @@ if __name__ == "__main__":
     argument_parser.add_argument("--categories", nargs="+", default=(), help="Abbreviations of the names of the categories to filter by")
     argument_parser.add_argument("--tokens", nargs="+", default=(),
                                  help="Tokens to filter by")
+    argument_parser.add_argument("--tokens-by-file", action="store_true",
+                                 help="tokens will be specified in a file instead of in the command line. Each line consists of space delimited list of tokens.")
     argument_parser.add_argument("--tokens-mode", default=CONSECUTIVE,
                                  help="mode of search for the tokens: CONSECUTIVE,SUBSEQUENCE,SUBSET")
     argument_parser.add_argument("--sentence-level", action="store_true",
