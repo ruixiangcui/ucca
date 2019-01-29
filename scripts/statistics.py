@@ -26,7 +26,7 @@ def main(args):
             row["tokens"] += len(passage.layer(layer0.LAYER_ID).all)
             row["nodes"] += len(non_terminals)
             row["discontinuous"] += sum(1 for n in non_terminals if n.discontiguous)
-            row["reentrant"] += sum(1 for n in non_terminals if len(n.incoming) > 1)
+            row["reentrant"] += sum(1 for n in non_terminals if any(e.attrib.get("remote") for e in n.incoming))
             row["edges"] += len(edges)
             row["primary"] += remote_counter[False]
             row["remote"] += remote_counter[True]
