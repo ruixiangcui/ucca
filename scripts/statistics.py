@@ -19,7 +19,7 @@ def main(args):
         row = df.loc[directory]
         for passage in get_passages_with_progress_bar(directory, desc=directory):
             l1 = passage.layer(layer1.LAYER_ID)
-            non_terminals = [n for n in l1.all if n not in l1.heads]
+            non_terminals = [n for n in l1.all if n not in l1.heads and len(n.get_terminals()) > 1]
             edges = {e for n in non_terminals for e in n}
             remote_counter = Counter(e.attrib.get("remote", False) for e in edges)
             row["sentences"] += 1
