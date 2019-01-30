@@ -322,34 +322,32 @@ class FoundationalNode(core.Node):
         return self.state is not None or self.process is not None
 
     def __str__(self):
-        def start(x):
-            return x.position if x.layer.ID == layer0.LAYER_ID else x.start_position
+        def start(e):
+            return e.child.position if e.child.layer.ID == layer0.LAYER_ID else e.child.start_position
 
-        def end(x):
-            return x.position if x.layer.ID == layer0.LAYER_ID else x.end_position
-
-        sorted_edges = sorted(list(self), key=lambda e: start(e.child))
-        output = ''
-        for i, edge in enumerate(sorted_edges):
+        sorted_edges = sorted(self, key=start)
+        output = []
+        for edge, next_edge in zip(sorted_edges, sorted_edges[1:] + [None]):
             node = edge.child
+            remote = edge.attrib.get('remote')
+            end = node.position if node.layer.ID == layer0.LAYER_ID else node.end_position
             if edge.tag == EdgeTags.Terminal:
-                space = ' ' if not end(node) == self.end_position else ''
-                output += '{}{}'.format(str(node), space)
+                output.append(str(node))
+                if end != self.end_position:
+                    output.append(" ")
             else:
-                edge_tag = edge.tag
-                if edge.attrib.get('remote'):
-                    edge_tag += '*'
+                edge_tags = "|".join(edge.tags)
+                if remote:
+                    edge_tags += '*'
                 if edge.attrib.get('uncertain'):
-                    edge_tag += '?'
-                if start(node) == -1:
-                    output += "[{} IMPLICIT] ".format(edge_tag)
+                    edge_tags += '?'
+                if start(edge) == -1:
+                    output.append("[{} IMPLICIT] ".format(edge_tags))
                 else:
-                    output += "[{} {}] ".format(edge_tag, str(node))
-            if start(node) != -1 and not edge.attrib.get('remote') and \
-                    i + 1 < len(sorted_edges) and \
-                    end(node) + 1 < start(sorted_edges[i + 1].child):
-                output += "... "  # adding '...' if discontiguous
-        return output
+                    output.append("[{} {}] ".format(edge_tags, str(node)))
+            if start(edge) != -1 and not remote and next_edge is not None and end + 1 < start(next_edge):
+                output.append("... ")  # adding '...' if discontiguous
+        return "".join(output)
 
     def get_top_scene(self):
         """Returns the top-level scene this FNode is within, or None"""
