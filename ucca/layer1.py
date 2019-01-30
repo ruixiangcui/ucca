@@ -336,15 +336,15 @@ class FoundationalNode(core.Node):
                 if end != self.end_position:
                     output.append(" ")
             else:
-                edge_tag = edge.tag
+                edge_tags = "|".join(edge.tags)
                 if remote:
-                    edge_tag += '*'
+                    edge_tags += '*'
                 if edge.attrib.get('uncertain'):
-                    edge_tag += '?'
+                    edge_tags += '?'
                 if start(edge) == -1:
-                    output.append("[{} IMPLICIT] ".format(edge_tag))
+                    output.append("[{} IMPLICIT] ".format(edge_tags))
                 else:
-                    output.append("[{} {}] ".format(edge_tag, str(node)))
+                    output.append("[{} {}] ".format(edge_tags, str(node)))
             if start(edge) != -1 and not remote and next_edge is not None and end + 1 < start(next_edge):
                 output.append("... ")  # adding '...' if discontiguous
         return "".join(output)
