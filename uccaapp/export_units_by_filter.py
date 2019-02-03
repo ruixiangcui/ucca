@@ -53,8 +53,10 @@ def main(output = None, comment = False, sentence_level = False, categories = ()
     if tokens_by_file:
         with open(tokens[0]) as f:
             token_lists = [line.strip().split() for line in f]
-    else:
+    elif tokens != ():
         token_lists = [tokens]
+    else:
+        token_lists = ()
 
     filtered_nodes = []
     for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(write=False, **kwargs):
