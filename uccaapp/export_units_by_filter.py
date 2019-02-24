@@ -49,7 +49,7 @@ def tokens_match(tokens1, tokens2, mode):
 
 
 def main(output = None, comment = False, sentence_level = False, categories = (), tokens = (), tokens_mode = CONSECUTIVE,
-         case_insensitive = False, tokens_by_file = False, write = False, **kwargs):
+         case_insensitive = False, tokens_by_file = False, remotes = False, write = False, **kwargs):
     if tokens_by_file:
         with open(tokens[0]) as f:
             token_lists = [line.strip().split() for line in f]
@@ -68,6 +68,8 @@ def main(output = None, comment = False, sentence_level = False, categories = ()
         for node in all_nodes:
             if comment and node.extra.get("remarks"):
                 filtered_nodes.append(("comment",node,task_id,user_id))
+            if remotes and len([n for n in node.outgoing if n.attrib.get("remote")]) > 0:
+                filtered_nodes.append(("remotes", node, task_id, user_id))
             if token_lists and not node.attrib.get("implicit"):
                 for token_list in token_lists:
                     unit_tokens = [t.text for t in node.get_terminals(punct=True)]
@@ -109,5 +111,7 @@ if __name__ == "__main__":
     argument_parser.add_argument("--case-insensitive", action="store_true",
                                  help="make tokens search case insensitive")
     argument_parser.add_argument("--comment", action="store_true", help="Output all the units that have comments")
+    argument_parser.add_argument("--remotes", action="store_true", help="Output all the units that have remote children")
 
     main(**vars(argument_parser.parse_args()))
+
