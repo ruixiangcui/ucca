@@ -344,7 +344,7 @@ def evaluate(guessed, ref, converter=None, verbose=False, constructions=DEFAULT,
     if normalize:  # FIXME clone passages to avoid modifying the original ones
         for passage in (guessed, ref):
             normalization.normalize(passage)  # flatten Cs inside Cs
-        move_functions(guessed, ref)  # move common Fs to be under the root
+        move_functions(guessed, ref)  # move common Fs to be under the root, FIXME should be before normalize
 
     if isinstance(eval_type, str):
         eval_type = [eval_type]
