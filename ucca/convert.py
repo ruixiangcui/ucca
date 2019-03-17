@@ -11,7 +11,6 @@ The possible other formats are:
     sdp (SemEval 2015 semantic dependency parsing shared task)
 """
 
-import json
 import os
 import pickle
 import re
@@ -28,8 +27,10 @@ from ucca.normalization import attach_punct
 
 try:
     # noinspection PyPackageRequirements
+    import simplejson as json
     from simplejson.scanner import JSONDecodeError
 except ImportError:
+    import json
     from json.decoder import JSONDecodeError
 
 
