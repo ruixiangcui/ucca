@@ -1,21 +1,21 @@
 """Utility functions for UCCA package."""
+import os
 import sys
 import time
 from collections import OrderedDict
 from collections import deque
-from itertools import groupby, islice
-
-import numpy as np
-import os
 from contextlib import contextmanager
 from enum import Enum
+from itertools import groupby, islice
 from operator import attrgetter, itemgetter
+
+import numpy as np
 from tqdm import tqdm
 
 from ucca import layer0, layer1
 
 MODEL_ENV_VAR = "SPACY_MODEL"  # Determines the default spaCy model to load
-DEFAULT_MODEL = {"en": "en_core_web_md", "fr": "fr_core_news_md", "de": "de_core_news_sm"}
+DEFAULT_MODEL = {"en": "en_core_web_md", "fr": "fr_core_news_md", "de": "de_core_news_md"}
 
 N_THREADS = 4
 BATCH_SIZE = 50
