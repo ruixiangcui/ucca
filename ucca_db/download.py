@@ -1,7 +1,8 @@
 import os
 from argparse import ArgumentParser
-from tqdm import tqdm
 from xml.etree.ElementTree import tostring
+
+from tqdm import tqdm
 
 from ucca import convert
 from ucca.ioutil import write_passage, external_write_mode
@@ -12,7 +13,7 @@ desc = "Download passages from old UCCA annotation app"
 
 def get_by_method(method, id_field, passage_id=None, **kwargs):
     if method == "xid":
-        return get_by_xids(xids=[id_field], **kwargs)[0]
+        return get_by_xids(xids=id_field, **kwargs)[0]
     elif method == "uid":
         return get_most_recent_passage_by_uid(id_field, passage_id, **kwargs)
     raise ValueError("Unknown method: '%s'" % method)
