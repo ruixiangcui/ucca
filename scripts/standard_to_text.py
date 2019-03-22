@@ -20,8 +20,8 @@ def numeric(x):
         return x
 
 
-def write_text(passage, f, lang):
-    for line in to_text(passage, lang=lang):
+def write_text(passage, f, sentences, lang):
+    for line in to_text(passage, sentences=sentences, lang=lang):
         print(line, file=f)
 
 
@@ -31,7 +31,7 @@ def main(args):
         out_file = os.path.join(args.outdir, args.join)
         with open(out_file, "w", encoding="utf-8") as f:
             for passage in get_passages_with_progress_bar(sorted(args.filenames, key=numeric), desc="Converting"):
-                write_text(passage, f, lang=args.lang)
+                write_text(passage, f, sentences=args.sentences, lang=args.lang)
         print("Wrote '%s'." % out_file)
     else:  # one file per passage
         for pattern in args.filenames:
@@ -39,13 +39,14 @@ def main(args):
                 passage = file2passage(filename)
                 basename = os.path.splitext(os.path.basename(filename))[0]
                 with open(os.path.join(args.outdir, basename + ".txt"), "w", encoding="utf-8") as f:
-                    write_text(passage, f, lang=args.lang)
+                    write_text(passage, f, sentences=args.sentences, lang=args.lang)
 
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description=desc)
     argparser.add_argument("filenames", nargs="+", help="passage file names to convert")
     argparser.add_argument("-o", "--outdir", default=".", help="output directory")
+    argparser.add_argument("-s", "--sentences", action="store_true", help="split to sentences using spaCy")
     argparser.add_argument("-l", "--lang", default="en", help="language two-letter code for sentence model")
     argparser.add_argument("-j", "--join", help="write just one text file with this name, with one line per passage")
     main(argparser.parse_args())
