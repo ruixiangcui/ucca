@@ -277,9 +277,8 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
             # Note that for discontiguous units we have a different work_elem,
             # because all the data on them are stored outside the hierarchy
             work_elem = _get_work_elem(elem)
-            edge_tag = SiteCfg.TagConversion[work_elem.get(
-                SiteCfg.Attr.ElemTag)]
-            node = l1.add_fnode(parent, edge_tag)
+            edge_tags = [[SiteCfg.TagConversion[tag]] for tag in work_elem.get(SiteCfg.Attr.ElemTag, "").split("|")]
+            node = l1.add_fnode_multiple(parent, edge_tags)
             SiteUtil.set_node(work_elem, node, elem2node)
 
             # Added by Omri to address cases where remote units direct at the chunks of discontiguous units
@@ -295,8 +294,8 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
     # Implicit units have their own tag, and aren't recursive, but nonetheless
     # are treated the same as regular units
     elif elem.tag == SiteCfg.Tags.Implicit:
-        edge_tag = SiteCfg.TagConversion[elem.get(SiteCfg.Attr.ElemTag)]
-        node = l1.add_fnode(parent, edge_tag, implicit=True)
+        edge_tags = [[SiteCfg.TagConversion[tag]] for tag in elem.get(SiteCfg.Attr.ElemTag, "").split("|")]
+        node = l1.add_fnode_multiple(parent, edge_tags, implicit=True)
         SiteUtil.set_node(elem, node, elem2node)
         _fill_attributes(elem, node)
     # non-unit, probably remote or linkage, which should be created in the end
@@ -334,13 +333,13 @@ def _from_site_annotation(elem, passage, elem2node):
     # converted
     for parent, elem in tbd:
         if elem.tag == SiteCfg.Tags.Remote:
-            edge_tag = SiteCfg.TagConversion[elem.get(SiteCfg.Attr.ElemTag)]
+            edge_tags = [[SiteCfg.TagConversion[tag]] for tag in elem.get(SiteCfg.Attr.ElemTag, "").split("|")]
             child = SiteUtil.get_node(elem, elem2node)
             if child is None:  # bug in XML, points to an invalid ID
                 print("Warning: remoteUnit with ID {} is invalid - skipping".
                       format(elem.get(SiteCfg.Attr.SiteID)), file=sys.stderr)
                 continue
-            l1.add_remote(parent, edge_tag, child)
+            l1.add_remote_multiple(parent, edge_tags, child)
         elif elem.tag == SiteCfg.Tags.Linkage:
             args = [elem2node[x] for x in
                     elem.get(SiteCfg.Attr.LinkageArgs).split(',')]
@@ -415,7 +414,7 @@ def to_site(passage):
                           EdgeTags.Punctuation)
                 for e in node)
             else SiteCfg.FALSE)
-        elem_tag = SiteCfg.EdgeConversion[node.ftag]
+        elem_tag = "|".join(SiteCfg.EdgeConversion[tag] for tag in node.ftags)
         attrib = {SiteCfg.Attr.ElemTag: elem_tag,
                   SiteCfg.Attr.SiteID: state.get_id(),
                   SiteCfg.Attr.Unanalyzable: unanalyzable,
@@ -439,7 +438,7 @@ def to_site(passage):
                       else SiteCfg.FALSE)
         remote_elem = ET.Element(SiteCfg.Tags.Remote,
                                  {SiteCfg.Attr.ElemTag:
-                                  SiteCfg.EdgeConversion[edge.tag],
+                                  "|".join(SiteCfg.EdgeConversion[tag] for tag in edge.tags),
                                   SiteCfg.Attr.SiteID: state.mapping[edge.child.ID],
                                   SiteCfg.Attr.Unanalyzable: SiteCfg.FALSE,
                                   SiteCfg.Attr.Uncertain: uncertain,
@@ -453,7 +452,7 @@ def to_site(passage):
                       else SiteCfg.FALSE)
         implicit_elem = ET.Element(SiteCfg.Tags.Implicit,
                                    {SiteCfg.Attr.ElemTag:
-                                    SiteCfg.EdgeConversion[node.ftag],
+                                    "|".join(SiteCfg.EdgeConversion[tag] for tag in node.ftags),
                                     SiteCfg.Attr.SiteID: state.get_id(),
                                     SiteCfg.Attr.Unanalyzable: SiteCfg.FALSE,
                                     SiteCfg.Attr.Uncertain: uncertain,
