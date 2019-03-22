@@ -246,7 +246,7 @@ def split_coordinated_main_rel(node, l1):
     for edge in node:
         attrib = edge.attrib.copy()
         if attrib.pop(COORDINATED_MAIN_REL, None):
-            assert {ETags.Process, ETags.State}.intersection(edge.tags), \
+            assert {ETags.Process, ETags.State}.issuperset(edge.tags), \
                 "%s node without main relation: %s" % (COORDINATED_MAIN_REL, node)
             main_rel = edge.child
             centers = main_rel.centers
