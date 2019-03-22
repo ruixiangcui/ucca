@@ -211,7 +211,7 @@ def flatten_functions(node):
         for child in node.functions:
             if len(child.children) > len(child.terminals):
                 for edge in child:
-                    copy_edge(edge, parent=node, tag = ETags.Function if edge.tag == ETags.Center else edge.tag)
+                    copy_edge(edge, parent=node, tag=ETags.Function if edge.tag == ETags.Center else edge.tag)
                 destroy(child)
         if len(node.functions) == len(node.children) == 1:
             for edge in node.incoming:
@@ -273,6 +273,10 @@ def split_coordinated_main_rel(node, l1):
             for scene_edge in outgoing:
                 if scene_edge.ID != edge.ID:
                     destroy(scene_edge)
+            if main_rel.incoming:
+                main_rel.destroy()
+            if not node.incoming:
+                node.destroy()
     return node
 
 
