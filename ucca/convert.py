@@ -408,6 +408,7 @@ def to_site(passage):
                      else SiteCfg.FALSE)
         suggestion = (SiteCfg.TRUE if node.attrib.get('suggest')
                       else SiteCfg.FALSE)
+        remarks = node.attrib.get("remarks")
         unanalyzable = (
             SiteCfg.TRUE if len(node) > 1 and all(
                 e.tag in (EdgeTags.Terminal,
@@ -415,12 +416,14 @@ def to_site(passage):
                 for e in node)
             else SiteCfg.FALSE)
         elem_tag = SiteCfg.EdgeConversion[node.ftag]
-        cunit_elem = ET.Element(SiteCfg.Tags.Unit,
-                                {SiteCfg.Attr.ElemTag: elem_tag,
-                                 SiteCfg.Attr.SiteID: state.get_id(),
-                                 SiteCfg.Attr.Unanalyzable: unanalyzable,
-                                 SiteCfg.Attr.Uncertain: uncertain,
-                                 SiteCfg.Attr.Suggestion: suggestion})
+        attrib = {SiteCfg.Attr.ElemTag: elem_tag,
+                  SiteCfg.Attr.SiteID: state.get_id(),
+                  SiteCfg.Attr.Unanalyzable: unanalyzable,
+                  SiteCfg.Attr.Uncertain: uncertain,
+                  SiteCfg.Attr.Suggestion: suggestion}
+        if remarks:
+            attrib[SiteCfg.Attr.Remarks] = remarks
+        cunit_elem = ET.Element(SiteCfg.Tags.Unit, attrib)
         if cunit_subelem is not None:
             cunit_elem.append(cunit_subelem)
         # When we add chunks of discontiguous units, we don't want them to
