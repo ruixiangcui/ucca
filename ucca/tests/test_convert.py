@@ -155,8 +155,8 @@ def test_to_standard():
     ref = load_xml("test_files/standard3.xml")  # old format of xml
     new_ref = convert.to_standard(convert.from_standard(ref))   # converting to the new xml format
     root = convert.to_standard(passage)
-    assert textutil.indent_xml(ETree.tostring(new_ref)).splitlines() == \
-            textutil.indent_xml(ETree.tostring(root)).splitlines()
+    assert (textutil.indent_xml(ETree.tostring(new_ref)).splitlines() ==
+            textutil.indent_xml(ETree.tostring(root)).splitlines())
 
 
 def test_from_standard():

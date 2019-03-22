@@ -262,7 +262,7 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
                 parent.add(EdgeTags.Terminal, node)
             elif node.tag == layer0.NodeTags.Punct:
                 SiteUtil.set_node(elem, l1.add_punct(
-                    parent, node, slot=1, layer="UCCA's foundational layer (+restrictions)"), elem2node)
+                    parent, node), elem2node)
             else:
                 # if we got here, we are the second (or later) chunk of a
                 # discontiguous unit, whose node was already created.
@@ -280,7 +280,7 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
             # Note that for discontiguous units we have a different work_elem,
             # because all the data on them are stored outside the hierarchy
             work_elem = _get_work_elem(elem)
-            edge_tags = [(SiteCfg.TagConversion[tag], 1, "UCCA's foundational layer (+restrictions)")
+            edge_tags = [(SiteCfg.TagConversion[tag],)
                          for tag in work_elem.get(SiteCfg.Attr.ElemTag, "").split("|") or None]
             attrib = {}
             if work_elem.get(SiteCfg.Attr.CoordinatedMainRel) == SiteCfg.TRUE:
@@ -301,7 +301,7 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
     # Implicit units have their own tag, and aren't recursive, but nonetheless
     # are treated the same as regular units
     elif elem.tag == SiteCfg.Tags.Implicit:
-        edge_tags = [(SiteCfg.TagConversion[tag], 1, "UCCA's foundational layer (+restrictions)")
+        edge_tags = [(SiteCfg.TagConversion[tag],)
                      for tag in elem.get(SiteCfg.Attr.ElemTag, "").split("|") or None]
         node = l1.add_fnode_multiple(parent, edge_tags, implicit=True)
         SiteUtil.set_node(elem, node, elem2node)
@@ -341,7 +341,7 @@ def _from_site_annotation(elem, passage, elem2node):
     # converted
     for parent, elem in tbd:
         if elem.tag == SiteCfg.Tags.Remote:
-            edge_tags = [(SiteCfg.TagConversion[tag], 1, "UCCA's foundational layer (+restrictions)")
+            edge_tags = [(SiteCfg.TagConversion[tag],)
                          for tag in elem.get(SiteCfg.Attr.ElemTag, "").split("|") or None]
             child = SiteUtil.get_node(elem, elem2node)
             if child is None:  # bug in XML, points to an invalid ID
