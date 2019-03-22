@@ -168,7 +168,7 @@ def reattach_terminals(l0, l1):
     for terminal in l0.all:
         for edge in terminal.incoming:
             if any(e.tag != ETags.Terminal for e in edge.parent):
-                node = l1.add_fnode(edge.parent, layer1.EdgeTags.Center)
+                node = l1.add_fnode(edge.parent, ETags.Center)
                 if copy_edge(edge, parent=node):
                     remove(edge.parent, edge)
 
@@ -176,8 +176,8 @@ def reattach_terminals(l0, l1):
 def attach_terminals(l0, l1):
     for terminal in l0.all:
         if not terminal.incoming:
-            node = l1.add_fnode(nearest_parent(l0, terminal), layer1.EdgeTags.Function)
-            node.add(layer1.EdgeTags.Terminal, terminal)
+            node = l1.add_fnode(nearest_parent(l0, terminal), ETags.Function)
+            node.add(ETags.Terminal, terminal)
 
 
 def flatten_centers(node):
@@ -238,11 +238,37 @@ def flatten_participants(node):
     return node
 
 
-def split_coordinated_main_rel(node):
+def split_coordinated_main_rel(node, l1):
     for edge in node:
-        if edge.attrib.get(COORDINATED_MAIN_REL):
-            pass
-
+        attrib = edge.attrib.copy()
+        if attrib.pop(COORDINATED_MAIN_REL, None):
+            assert {ETags.Process, ETags.State}.intersection(edge.tags), \
+                "%s node without main relation: %s" % (COORDINATED_MAIN_REL, node)
+            main_rel = edge.child
+            centers = main_rel.centers
+            assert centers, "%s node without centers: %s" % (COORDINATED_MAIN_REL, main_rel)
+            top = fparent(node)
+            if ETags.ParallelScene in node.ftags:
+                top.remove(node)
+            else:
+                top = node
+            outgoing = list(node.outgoing)
+            is_first = True  # All non-main-relation edges for non-first main relation will be remote
+            for center in centers:
+                main_rel.remove(center)
+                new_scene = l1.add_fnode(top, ETags.ParallelScene)
+                copy_edge(edge, parent=new_scene, child=center, attrib=attrib)
+                for scene_edge in outgoing:
+                    if scene_edge.ID != edge.ID:  # Not the CMR edge itself
+                        copy_edge(scene_edge, parent=new_scene, attrib=None if is_first else {"remote": True})
+                is_first = False
+            for main_rel_edge in list(main_rel.outgoing):
+                copy_edge(main_rel_edge, parent=top,
+                          tag=ETags.Linker if ETags.Connector in main_rel_edge.tags else None)
+                destroy(main_rel_edge)
+            for scene_edge in outgoing:
+                if scene_edge.ID != edge.ID:
+                    destroy(scene_edge)
     return node
 
 
@@ -253,7 +279,7 @@ def normalize_node(node, l1, extra):
             move_scene_elements(node)
             move_sub_scene_elements(node)
         separate_scenes(node, l1, top_level=node in l1.heads)
-        node = split_coordinated_main_rel(node)
+        node = split_coordinated_main_rel(node, l1)
         if node is None:
             return None
         node = flatten_centers(node)
