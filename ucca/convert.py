@@ -59,6 +59,7 @@ class SiteCfg:
         elements and the annotation units.
         """
         Main = 'units'
+        Attrib = 'attrib'
         Paragraphs = 'units/unit/*'
         Annotation = 'units/unit/*/*'
         Discontiguous = 'unitGroups'
@@ -103,7 +104,7 @@ class SiteCfg:
     FALSE = 'false'
 
     """ version of site XML scheme which self adheres to """
-    SchemeVersion = '1.0.3'
+    SchemeVersion = '1.0.4'
     """ mapping of site XML tag attribute to layer1 edge tags. """
     TagConversion = {'Linked U': EdgeTags.ParallelScene,
                      'Parallel Scene': EdgeTags.ParallelScene,
@@ -260,7 +261,8 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
             if node.tag == layer0.NodeTags.Word:
                 parent.add(EdgeTags.Terminal, node)
             elif node.tag == layer0.NodeTags.Punct:
-                SiteUtil.set_node(elem, l1.add_punct(parent, node), elem2node)
+                SiteUtil.set_node(elem, l1.add_punct(
+                    parent, node, slot=1, layer="UCCA's foundational layer (+restrictions)"), elem2node)
             else:
                 # if we got here, we are the second (or later) chunk of a
                 # discontiguous unit, whose node was already created.
@@ -278,7 +280,8 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
             # Note that for discontiguous units we have a different work_elem,
             # because all the data on them are stored outside the hierarchy
             work_elem = _get_work_elem(elem)
-            edge_tags = [[SiteCfg.TagConversion[tag]] for tag in work_elem.get(SiteCfg.Attr.ElemTag, "").split("|")]
+            edge_tags = [(SiteCfg.TagConversion[tag], 1, "UCCA's foundational layer (+restrictions)")
+                         for tag in work_elem.get(SiteCfg.Attr.ElemTag, "").split("|") or None]
             attrib = {}
             if work_elem.get(SiteCfg.Attr.CoordinatedMainRel) == SiteCfg.TRUE:
                 attrib[COORDINATED_MAIN_REL] = True
@@ -298,7 +301,8 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
     # Implicit units have their own tag, and aren't recursive, but nonetheless
     # are treated the same as regular units
     elif elem.tag == SiteCfg.Tags.Implicit:
-        edge_tags = [[SiteCfg.TagConversion[tag]] for tag in elem.get(SiteCfg.Attr.ElemTag, "").split("|")]
+        edge_tags = [(SiteCfg.TagConversion[tag], 1, "UCCA's foundational layer (+restrictions)")
+                     for tag in elem.get(SiteCfg.Attr.ElemTag, "").split("|") or None]
         node = l1.add_fnode_multiple(parent, edge_tags, implicit=True)
         SiteUtil.set_node(elem, node, elem2node)
         _fill_attributes(elem, node)
@@ -337,7 +341,8 @@ def _from_site_annotation(elem, passage, elem2node):
     # converted
     for parent, elem in tbd:
         if elem.tag == SiteCfg.Tags.Remote:
-            edge_tags = [[SiteCfg.TagConversion[tag]] for tag in elem.get(SiteCfg.Attr.ElemTag, "").split("|")]
+            edge_tags = [(SiteCfg.TagConversion[tag], 1, "UCCA's foundational layer (+restrictions)")
+                         for tag in elem.get(SiteCfg.Attr.ElemTag, "").split("|") or None]
             child = SiteUtil.get_node(elem, elem2node)
             if child is None:  # bug in XML, points to an invalid ID
                 print("Warning: remoteUnit with ID {} is invalid - skipping".
@@ -360,7 +365,8 @@ def from_site(elem):
     :return: The converted core.Passage object
     """
     pid = elem.find(SiteCfg.Paths.Main).get(SiteCfg.Attr.PassageID)
-    passage = core.Passage(pid)
+    attrib = elem.find(SiteCfg.Paths.Attrib)
+    passage = core.Passage(pid, attrib=None if attrib is None else attrib.attrib)
     elem2node = {}
     _from_site_terminals(elem, passage, elem2node)
     _from_site_annotation(elem, passage, elem2node)
@@ -567,7 +573,8 @@ def to_site(passage):
     root = ET.Element('root', {'schemeVersion': SiteCfg.SchemeVersion})
     groups = ET.SubElement(root, 'unitGroups')
     groups.extend(unit_groups)
-    units = ET.SubElement(root, 'units', {SiteCfg.Attr.PassageID: passage.ID})
+    units = ET.SubElement(root, SiteCfg.Paths.Main, {SiteCfg.Attr.PassageID: passage.ID})
+    ET.SubElement(root, SiteCfg.Paths.Attrib, passage.attrib.copy())
     units0 = ET.SubElement(units, SiteCfg.Tags.Unit,
                            {SiteCfg.Attr.ElemTag: SiteCfg.TBD,
                             SiteCfg.Attr.SiteID: '0',
