@@ -2,6 +2,10 @@ from ucca import layer0, layer1
 from ucca.layer0 import NodeTags as L0Tags
 from ucca.layer1 import EdgeTags as ETags, NodeTags as L1Tags
 
+NO_MULTIPLE_INCOMING_CATEGORIES = {ETags.Function, ETags.ParallelScene, ETags.Linker, ETags.LinkRelation,
+                                   ETags.Connector, ETags.Punctuation, ETags.Terminal}
+TOP_CATEGORIES = {ETags.ParallelScene, ETags.Linker, ETags.Function, ETags.Ground, ETags.Punctuation,
+                  ETags.LinkRelation, ETags.LinkArgument, ETags.Connector}
 COORDINATED_MAIN_REL = "Coordinated_Main_Rel."
 
 
@@ -253,21 +257,20 @@ def split_coordinated_main_rel(node, l1):
             else:
                 top = node
             outgoing = list(node.outgoing)
-            is_first = True  # All non-main-relation edges for non-first main relation will be remote
+            scenes = []
             for center in centers:
                 main_rel.remove(center)
                 new_scene = l1.add_fnode(top, ETags.ParallelScene)
                 copy_edge(edge, parent=new_scene, child=center, attrib=attrib)
                 for scene_edge in outgoing:
-                    if scene_edge.ID != edge.ID and (
-                            is_first or not {ETags.Function, ETags.ParallelScene, ETags.Linker, ETags.LinkRelation,
-                                             ETags.Connector, ETags.Punctuation, ETags.Terminal}.intersection(
-                                             scene_edge.tags)):
+                    if scene_edge.ID != edge.ID and not (
+                            scenes and NO_MULTIPLE_INCOMING_CATEGORIES.intersection(scene_edge.tags)):
                         # Not the CMR edge itself, and not a category that does not allow multiple parents
-                        copy_edge(scene_edge, parent=new_scene, attrib=None if is_first else {"remote": True})
-                is_first = False
+                        copy_edge(scene_edge, parent=new_scene, attrib={"remote": True} if scenes else None)
+                scenes.append(new_scene)
             for main_rel_edge in list(main_rel.outgoing):
-                copy_edge(main_rel_edge, parent=top,
+                tags = main_rel_edge.tags
+                copy_edge(main_rel_edge, parent=top if TOP_CATEGORIES.issuperset(tags) else scenes[0],
                           tag=ETags.Linker if ETags.Connector in main_rel_edge.tags else None)
                 destroy(main_rel_edge)
             for scene_edge in outgoing:
