@@ -259,7 +259,11 @@ def split_coordinated_main_rel(node, l1):
                 new_scene = l1.add_fnode(top, ETags.ParallelScene)
                 copy_edge(edge, parent=new_scene, child=center, attrib=attrib)
                 for scene_edge in outgoing:
-                    if scene_edge.ID != edge.ID:  # Not the CMR edge itself
+                    if scene_edge.ID != edge.ID and (
+                            is_first or not {ETags.Function, ETags.ParallelScene, ETags.Linker, ETags.LinkRelation,
+                                             ETags.Connector, ETags.Punctuation, ETags.Terminal}.intersection(
+                                             scene_edge.tags)):
+                        # Not the CMR edge itself, and not a category that does not allow multiple parents
                         copy_edge(scene_edge, parent=new_scene, attrib=None if is_first else {"remote": True})
                 is_first = False
             for main_rel_edge in list(main_rel.outgoing):
