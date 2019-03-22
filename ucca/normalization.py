@@ -2,6 +2,8 @@ from ucca import layer0, layer1
 from ucca.layer0 import NodeTags as L0Tags
 from ucca.layer1 import EdgeTags as ETags, NodeTags as L1Tags
 
+COORDINATED_MAIN_REL = "Coordinated_Main_Rel."
+
 
 def fparent(node_or_edge):
     try:
@@ -236,6 +238,14 @@ def flatten_participants(node):
     return node
 
 
+def split_coordinated_main_rel(node):
+    for edge in node:
+        if edge.attrib.get(COORDINATED_MAIN_REL):
+            pass
+
+    return node
+
+
 def normalize_node(node, l1, extra):
     if node.tag == L1Tags.Foundational:
         if extra:
@@ -243,6 +253,9 @@ def normalize_node(node, l1, extra):
             move_scene_elements(node)
             move_sub_scene_elements(node)
         separate_scenes(node, l1, top_level=node in l1.heads)
+        node = split_coordinated_main_rel(node)
+        if node is None:
+            return None
         node = flatten_centers(node)
         if node is None:
             return

@@ -23,7 +23,7 @@ from operator import attrgetter, itemgetter
 
 from ucca import textutil, core, layer0, layer1
 from ucca.layer1 import EdgeTags
-from ucca.normalization import attach_punct
+from ucca.normalization import attach_punct, COORDINATED_MAIN_REL
 
 try:
     # noinspection PyPackageRequirements
@@ -87,6 +87,7 @@ class SiteCfg:
         GroupID = 'unitGroupID'
         LinkageArgs = 'args'
         Suggestion = 'suggestion'
+        CoordinatedMainRel = 'cmr'
 
     __init__ = None
     Tags = _Tags
@@ -278,7 +279,10 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
             # because all the data on them are stored outside the hierarchy
             work_elem = _get_work_elem(elem)
             edge_tags = [[SiteCfg.TagConversion[tag]] for tag in work_elem.get(SiteCfg.Attr.ElemTag, "").split("|")]
-            node = l1.add_fnode_multiple(parent, edge_tags)
+            attrib = {}
+            if work_elem.get(SiteCfg.Attr.CoordinatedMainRel) == SiteCfg.TRUE:
+                attrib[COORDINATED_MAIN_REL] = True
+            node = l1.add_fnode_multiple(parent, edge_tags, edge_attrib=attrib)
             SiteUtil.set_node(work_elem, node, elem2node)
 
             # Added by Omri to address cases where remote units direct at the chunks of discontiguous units
@@ -407,7 +411,6 @@ def to_site(passage):
                      else SiteCfg.FALSE)
         suggestion = (SiteCfg.TRUE if node.attrib.get('suggest')
                       else SiteCfg.FALSE)
-        remarks = node.attrib.get("remarks")
         unanalyzable = (
             SiteCfg.TRUE if len(node) > 1 and all(
                 e.tag in (EdgeTags.Terminal,
@@ -420,8 +423,11 @@ def to_site(passage):
                   SiteCfg.Attr.Unanalyzable: unanalyzable,
                   SiteCfg.Attr.Uncertain: uncertain,
                   SiteCfg.Attr.Suggestion: suggestion}
+        remarks = node.attrib.get("remarks")
         if remarks:
             attrib[SiteCfg.Attr.Remarks] = remarks
+        if any(edge.attrib.get(COORDINATED_MAIN_REL) for edge in node.incoming):
+            attrib[SiteCfg.Attr.CoordinatedMainRel] = SiteCfg.TRUE
         cunit_elem = ET.Element(SiteCfg.Tags.Unit, attrib)
         if cunit_subelem is not None:
             cunit_elem.append(cunit_subelem)
@@ -825,7 +831,6 @@ def to_sequence(passage):
 
 UNANALYZABLE = "Unanalyzable"
 UNCERTAIN = "Uncertain"
-COORDINATED_MAIN_REL = "Coordinated_Main_Rel."
 IGNORED_CATEGORIES = {UNANALYZABLE, UNCERTAIN, COORDINATED_MAIN_REL}
 IGNORED_ABBREVIATIONS = {EdgeTags.Unanalyzable, EdgeTags.Uncertain, COORDINATED_MAIN_REL}
 
