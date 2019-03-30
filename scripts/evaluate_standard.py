@@ -83,7 +83,7 @@ def summarize(args, results, eval_type):
             print("Wrote '%s'" % filename)
     if args.errors_file:
         with open(args.errors_file, "w", encoding="utf-8") as f:
-            summary.print_confusion_matrix(sep=",", file=f)
+            summary.print_confusion_matrix(sep=",", as_table=args.as_table, file=f)
         print("Wrote '%s'" % args.errors_file)
 
 
