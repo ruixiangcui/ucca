@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-import sys
-
 import argparse
 import json
+import sys
+
 from tqdm import tqdm
 
 from ucca import normalization, validation
@@ -43,7 +43,10 @@ class TaskDownloader(ServerAccessor):
         except ValueError as e:
             raise ValueError("Failed reading json for task %s:\n%s" % (task_id, json.dumps(task))) from e
         if normalize:
-            normalization.normalize(passage)
+            try:
+                normalization.normalize(passage)
+            except AssertionError as e:
+                raise ValueError("Failed normalizing task %s:\n%s" % (task_id, json.dumps(task))) from e
         if log:
             print(passage.ID, task_id, user_id, task["user_comment"], task["created_at"], task["updated_at"],
                   file=log, sep="\t", flush=True)
