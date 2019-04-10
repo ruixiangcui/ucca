@@ -277,6 +277,9 @@ def split_coordinated_main_rel(node, l1):
                 if scene_edge.ID != edge.ID:
                     destroy(scene_edge)
             if main_rel.incoming:
+                for remote_edge in main_rel.incoming:
+                    if remote_edge.attrib.get("remote"):
+                        copy_edge(remote_edge, child=centers[0])
                 main_rel.destroy()
             if not node.incoming:
                 node.destroy()
