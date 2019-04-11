@@ -22,6 +22,8 @@ class ExternalIdSetter(ServerAccessor):
                 task = self.get_task(passage_id)
                 passage_id = task["passage"]["id"]
             passage = self.get_passage(passage_id)
+            if passage["external_id"] == external_id:
+                continue
             passage["external_id"] = external_id
             passage_out = self.update_passage(**passage)
             assert passage_out["external_id"] == external_id, "External ID failed to update for passage %s" % passage_id
