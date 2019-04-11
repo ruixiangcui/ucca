@@ -52,7 +52,7 @@ def main(args):
     nlp = spacy.load(args.lang)
     docs = [nlp(line) for line in tqdm(list(gen_lines(args.text)), desc="Tokenizing " + args.text, unit=" lines")]
     out = open(args.out, "w", encoding="utf-8", newline="") if args.out else sys.stdout
-    writer = csv.writer(out, delimiter="\t")
+    writer = csv.writer(out, delimiter="\t", quoting=csv.QUOTE_NONE)
     for p in get_passages_with_progress_bar(args.filenames, desc="Matching", converters={}):
         match_passage_text(p, docs, writer)
     out.close()
