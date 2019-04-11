@@ -1,5 +1,4 @@
 import argparse
-import csv
 import re
 import sys
 from glob import glob
@@ -32,7 +31,7 @@ class CandidateMatcher:
         return len(self.paragraph_tokens_set.intersection(s.orth_ for s in doc))
 
 
-def match_passage_text(passage, docs, writer):
+def match_passage_text(passage, docs, out):
     passage_tokens = sorted(passage.layer(layer0.LAYER_ID).all, key=attrgetter("position"))
     for paragraph, paragraph_tokens in groupby(passage_tokens, key=attrgetter("paragraph")):
         paragraph_tokens_text = [terminal.text for terminal in paragraph_tokens]
@@ -45,16 +44,15 @@ def match_passage_text(passage, docs, writer):
                     if matcher(doc[start:end]) < match:
                         break
                     sub_doc = doc[start:end]
-        writer.writerow((passage.ID, str(sub_doc)))
+        print(passage.ID, sub_doc, sep="\t", file=out)
 
 
 def main(args):
     nlp = spacy.load(args.lang)
     docs = [nlp(line) for line in tqdm(list(gen_lines(args.text)), desc="Tokenizing " + args.text, unit=" lines")]
-    out = open(args.out, "w", encoding="utf-8", newline="") if args.out else sys.stdout
-    writer = csv.writer(out, delimiter="\t", quoting=csv.QUOTE_NONE)
+    out = open(args.out, "w", encoding="utf-8") if args.out else sys.stdout
     for p in get_passages_with_progress_bar(args.filenames, desc="Matching", converters={}):
-        match_passage_text(p, docs, writer)
+        match_passage_text(p, docs, out)
     out.close()
 
 
