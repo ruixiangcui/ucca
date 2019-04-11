@@ -20,9 +20,10 @@ def numeric(x):
         return x
 
 
-def write_text(passage, f, sentences, lang):
+def write_text(passage, f, sentences, lang, prepend_id=False):
     for line in to_text(passage, sentences=sentences, lang=lang):
-        print(line, file=f)
+        fields = [passage.ID, line] if prepend_id else [line]
+        print(*fields, file=f, sep="\t")
 
 
 def main(args):
@@ -31,7 +32,7 @@ def main(args):
         out_file = os.path.join(args.outdir, args.join)
         with open(out_file, "w", encoding="utf-8") as f:
             for passage in get_passages_with_progress_bar(sorted(args.filenames, key=numeric), desc="Converting"):
-                write_text(passage, f, sentences=args.sentences, lang=args.lang)
+                write_text(passage, f, sentences=args.sentences, lang=args.lang, prepend_id=args.prepend_id)
         print("Wrote '%s'." % out_file)
     else:  # one file per passage
         for pattern in args.filenames:
@@ -39,7 +40,7 @@ def main(args):
                 passage = file2passage(filename)
                 basename = os.path.splitext(os.path.basename(filename))[0]
                 with open(os.path.join(args.outdir, basename + ".txt"), "w", encoding="utf-8") as f:
-                    write_text(passage, f, sentences=args.sentences, lang=args.lang)
+                    write_text(passage, f, sentences=args.sentences, lang=args.lang, prepend_id=args.prepend_id)
 
 
 if __name__ == "__main__":
@@ -49,4 +50,5 @@ if __name__ == "__main__":
     argparser.add_argument("-s", "--sentences", action="store_true", help="split to sentences using spaCy")
     argparser.add_argument("-l", "--lang", default="en", help="language two-letter code for sentence model")
     argparser.add_argument("-j", "--join", help="write just one text file with this name, with one line per passage")
+    argparser.add_argument("-p", "--prepend-id", action="store_true", help="prepend the passage ID to the output text")
     main(argparser.parse_args())
