@@ -5,11 +5,13 @@ from glob import glob
 from itertools import groupby
 from operator import attrgetter
 
-import spacy
+from sacremoses import MosesDetokenizer
 from tqdm import tqdm
 
 from ucca import layer0
 from ucca.ioutil import get_passages_with_progress_bar
+
+detokenizer = MosesDetokenizer()
 
 
 def gen_lines(filenames):
@@ -24,35 +26,42 @@ def gen_lines(filenames):
 
 
 class CandidateMatcher:
-    def __init__(self, paragraph_tokens_set):
-        self.paragraph_tokens_set = paragraph_tokens_set
+    def __init__(self, text):
+        self.text = text
+        self.char_map = {}
+        no_space_chars = []
+        for i, char in enumerate(text):
+            if not char.isspace():
+                self.char_map[len(no_space_chars)] = i
+                no_space_chars.append(char)
+        self.no_space_text = "".join(no_space_chars)
 
-    def __call__(self, doc):
-        return len(self.paragraph_tokens_set.intersection(s.orth_ for s in doc))
+    def __call__(self, no_space_text):
+        try:
+            index = self.no_space_text.index(no_space_text)
+            return self.text[self.char_map[index]:self.char_map[index + len(no_space_text) - 1] + 1]
+        except ValueError:
+            return None
 
 
-def match_passage_text(passage, docs, out):
+def match_passage_text(passage, matchers, out):
     passage_tokens = sorted(passage.layer(layer0.LAYER_ID).all, key=attrgetter("position"))
-    for paragraph, paragraph_tokens in groupby(passage_tokens, key=attrgetter("paragraph")):
-        paragraph_tokens_text = [terminal.text for terminal in paragraph_tokens]
-        matcher = CandidateMatcher(set(paragraph_tokens_text))
-        doc = sub_doc = max(docs, key=matcher)
-        match = matcher(doc)
-        for start in range(len(doc)):
-            if not doc[start].is_punct:
-                for end in range(len(doc), start + 1, -1):
-                    if matcher(doc[start:end]) < match:
-                        break
-                    sub_doc = doc[start:end]
-        print(passage.ID, sub_doc, sep="\t", file=out)
+    for paragraph, terminals in groupby(passage_tokens, key=attrgetter("paragraph")):
+        tokens = [terminal.text for terminal in terminals]
+        no_space_text = "".join(tokens)
+        try:
+            match = next(filter(None, (matcher(no_space_text) for matcher in matchers)))
+        except StopIteration:
+            match = detokenizer.detokenize(tokens)
+        print(passage.ID, match, sep="\t", file=out)
 
 
 def main(args):
-    nlp = spacy.load(args.lang)
-    docs = [nlp(line) for line in tqdm(list(gen_lines(args.text)), desc="Tokenizing " + args.text, unit=" lines")]
+    matchers = [CandidateMatcher(line) for line in tqdm(list(gen_lines(args.text)),
+                                                        desc="Indexing " + args.text, unit=" lines")]
     out = open(args.out, "w", encoding="utf-8") if args.out else sys.stdout
     for p in get_passages_with_progress_bar(args.filenames, desc="Matching", converters={}):
-        match_passage_text(p, docs, out)
+        match_passage_text(p, matchers, out)
     out.close()
 
 
