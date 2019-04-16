@@ -1,7 +1,7 @@
 import pytest
 
 from ucca import layer0, convert, textutil
-from .conftest import crossing, multi_sent, l1_passage, discontiguous, empty, PASSAGES
+from .conftest import crossing, multi_sent, multi_sent_with_quotes, l1_passage, discontiguous, empty, PASSAGES
 
 """Tests the textutil module functions and classes."""
 
@@ -12,6 +12,7 @@ from .conftest import crossing, multi_sent, l1_passage, discontiguous, empty, PA
         (discontiguous, [20]),
         (l1_passage, [20]),
         (empty, []),
+        (multi_sent_with_quotes, [5, 9, 13]),  # FIXME should be 6, 9, 13
 ))
 def test_break2sentences(create, breaks):
     """Tests identifying correctly sentence ends. """
