@@ -5,13 +5,10 @@ from glob import glob
 from itertools import groupby
 from operator import attrgetter
 
-from sacremoses import MosesDetokenizer
 from tqdm import tqdm
 
 from ucca import layer0
 from ucca.ioutil import get_passages_with_progress_bar
-
-detokenizer = MosesDetokenizer()
 
 
 def gen_lines(filenames):
@@ -49,10 +46,7 @@ def match_passage_text(passage, matchers, out):
     for paragraph, terminals in groupby(passage_tokens, key=attrgetter("paragraph")):
         tokens = [terminal.text for terminal in terminals]
         no_space_text = "".join(tokens)
-        try:
-            match = next(filter(None, (matcher(no_space_text) for matcher in matchers)))
-        except StopIteration:
-            match = detokenizer.detokenize(tokens)
+        match = next(filter(None, (matcher(no_space_text) for matcher in matchers)))
         print(passage.ID, match, sep="\t", file=out)
 
 
