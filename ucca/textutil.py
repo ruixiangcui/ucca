@@ -220,7 +220,7 @@ def get_lang(passage_context):
     return passage_context[0].attrib.get("lang")
 
 
-def to_annotate(passage_contexts, replace, as_array, as_extra):
+def to_annotate(passage_contexts, replace, as_array=False, as_extra=True):
     """Filter passages to get only those that require annotation; split to paragraphs and return generator of
     (list of tokens, (paragraph index, list of Terminals, Passage) + original context appended) tuples"""
     return (([t.text for t in terminals] if replace or not is_annotated(passage, as_array, as_extra) else (),
@@ -228,7 +228,7 @@ def to_annotate(passage_contexts, replace, as_array, as_extra):
             for i, terminals in enumerate(break2paragraphs(passage, return_terminals=True)))
 
 
-def is_annotated(passage, as_array, as_extra):
+def is_annotated(passage, as_array=False, as_extra=True):
     """Whether the passage is already annotated or only partially annotated"""
     l0 = passage.layer(layer0.LAYER_ID)
     docs = l0.extra.get("doc")
