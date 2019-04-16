@@ -185,22 +185,24 @@ def annotate(passage, *args, **kwargs):
     list(annotate_all([passage], *args, **kwargs))
 
 
-def annotate_as_tuples(passages, replace=False, as_array=False, lang="en", vocab=None, verbose=False):
+def annotate_as_tuples(passages, replace=False, as_array=False, as_extra=True, lang="en", vocab=None, verbose=False):
     for passage_lang, passages_by_lang in groupby(passages, get_lang):
         for need_annotation, stream in groupby(to_annotate(passages_by_lang, replace, as_array), lambda x: bool(x[0])):
             annotated = get_nlp(passage_lang or lang).pipe(
                 stream, as_tuples=True, n_threads=N_THREADS, batch_size=BATCH_SIZE) if need_annotation else stream
-            annotated = set_docs(annotated, as_array, passage_lang or lang, vocab, replace, verbose)
+            annotated = set_docs(annotated, as_array, as_extra, passage_lang or lang, vocab, replace, verbose)
             for passage, passages in groupby(annotated, itemgetter(0)):
                 yield deque(passages, maxlen=1).pop()  # Wait until all paragraphs have been annotated
 
 
-def annotate_all(passages, replace=False, as_array=False, as_tuples=False, lang="en", vocab=None, verbose=False):
+def annotate_all(passages, replace=False, as_array=False, as_extra=True, as_tuples=False, lang="en", vocab=None,
+                 verbose=False):
     """
     Run spaCy pipeline on the given passages, unless already annotated
     :param passages: iterable of Passage objects, whose layer 0 nodes will be added entries in the `extra' dict
     :param replace: even if a given passage is already annotated, replace with new annotation
     :param as_array: instead of adding `extra' entries to each terminal, set layer 0 extra["doc"] to array of ids
+    :param as_extra: set `extra' entries to each terminal
     :param as_tuples: treat input as tuples of (passage text, context), and return context for each passage as-is
     :param lang: optional two-letter language code, will be overridden if passage has "lang" attrib
     :param vocab: optional dictionary of vocabulary IDs to string values, to avoid loading spaCy model
@@ -209,7 +211,8 @@ def annotate_all(passages, replace=False, as_array=False, as_tuples=False, lang=
     """
     if not as_tuples:
         passages = ((p,) for p in passages)
-    for t in annotate_as_tuples(passages, replace=replace, as_array=as_array, lang=lang, vocab=vocab, verbose=verbose):
+    for t in annotate_as_tuples(passages, replace=replace, as_array=as_array, as_extra=as_extra, lang=lang, vocab=vocab,
+                                verbose=verbose):
         yield t if as_tuples else t[0]
 
 
@@ -217,27 +220,28 @@ def get_lang(passage_context):
     return passage_context[0].attrib.get("lang")
 
 
-def to_annotate(passage_contexts, replace, as_array):
+def to_annotate(passage_contexts, replace, as_array, as_extra):
     """Filter passages to get only those that require annotation; split to paragraphs and return generator of
     (list of tokens, (paragraph index, list of Terminals, Passage) + original context appended) tuples"""
-    return (([t.text for t in terminals] if replace or not is_annotated(passage, as_array) else (),
+    return (([t.text for t in terminals] if replace or not is_annotated(passage, as_array, as_extra) else (),
              (i, terminals, passage) + tuple(context)) for passage, *context in passage_contexts
             for i, terminals in enumerate(break2paragraphs(passage, return_terminals=True)))
 
 
-def is_annotated(passage, as_array):
+def is_annotated(passage, as_array, as_extra):
     """Whether the passage is already annotated or only partially annotated"""
     l0 = passage.layer(layer0.LAYER_ID)
-    if as_array:
-        docs = l0.extra.get("doc")
-        return not l0.all or docs is not None and len(docs) == max(t.paragraph for t in l0.all) and \
-            sum(map(len, docs)) == len(l0.all) and \
-            all(i is None or isinstance(i, int) for l in docs for t in l for i in t)
-    return all(a.key in t.extra for t in l0.all for a in Attr)
+    docs = l0.extra.get("doc")
+    return as_array and (
+        not l0.all or docs is not None and len(docs) == max(t.paragraph for t in l0.all) and
+        sum(map(len, docs)) == len(l0.all) and
+        all(i is None or isinstance(i, int) for l in docs for t in l for i in t)) or \
+        as_extra and all(a.key in t.extra for t in l0.all for a in Attr)
 
 
-def set_docs(annotated, as_array, lang, vocab, replace, verbose):
-    """Given spaCy annotations, set values in layer0.extra per paragraph if as_array=True, or else in Terminal.extra"""
+def set_docs(annotated, as_array, as_extra, lang, vocab, replace, verbose):
+    """Given spaCy annotations, set values in layer0.extra per paragraph if as_array=True,
+       and in Terminal.extra if as_extra=True"""
     for doc, (i, terminals, passage, *context) in annotated:
         if doc:  # Not empty, so copy values
             from spacy import attrs
@@ -247,7 +251,7 @@ def set_docs(annotated, as_array, lang, vocab, replace, verbose):
                 existing = docs[i] + (len(arr) - len(docs[i])) * [len(Attr) * [None]]
                 docs[i] = [[a(v if e is None or replace else e, get_vocab(vocab, lang), as_array=True)
                             for a, v, e in zip(Attr, values, es)] for values, es in zip(arr, existing)]
-            else:
+            if as_extra:
                 for terminal, values in zip(terminals, arr):
                     for attr, value in zip(Attr, values):
                         if replace or not terminal.extra.get(attr.key):
