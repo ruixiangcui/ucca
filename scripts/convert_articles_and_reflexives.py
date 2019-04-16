@@ -13,6 +13,10 @@ ARTICLES = {
     "en": ("a", "an", "the"),
 }
 
+REFLEXIVES = {
+    "en": ("herself", "himself", "itself", "themselves", "yourself", "yourselves", "myself", "ourselves", "oneself"),
+}
+
 
 def change_article_to_function(terminal, parent, lang):
     if terminal.text.lower() in ARTICLES[lang]:
@@ -24,7 +28,23 @@ def change_article_to_function(terminal, parent, lang):
                         return True
 
 
-RULES = (change_article_to_function,)
+def insert_reflexive_into_relation(terminal, parent, lang):
+    if terminal.text.lower() in REFLEXIVES.get(lang, ()):
+        for edge in parent.incoming:
+            if not edge.attrib.get("remote"):
+                for category in edge.categories:
+                    if category.tag == layer1.EdgeTags.Adverbial:
+                        for grandparent in parent.parents:
+                            new_parent = grandparent.process or grandparent.state
+                            if new_parent is not None:
+                                while any(layer1.EdgeTags.Center in e.tags for e in new_parent):
+                                    new_parent = next(e for e in new_parent if layer1.EdgeTags.Center in e.tags).child
+                                parent.destroy()
+                                new_parent.add(layer1.EdgeTags.Terminal, terminal)
+                                return True
+
+
+RULES = (change_article_to_function, insert_reflexive_into_relation)
 
 
 def convert_passage(passage, lang, report_writer):
