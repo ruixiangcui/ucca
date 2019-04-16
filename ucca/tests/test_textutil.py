@@ -85,9 +85,11 @@ def test_preannotate_passage(create, as_array, convert_and_back, partial, monkey
                     terminal.extra[attr.key] = value
     passage = (passage, convert.from_standard(convert.to_standard(passage)))[convert_and_back]
     if not partial:
-        assert textutil.is_annotated(passage, as_array=as_array), "Passage %s is not pre-annotated" % passage.ID
-    textutil.annotate(passage, as_array=as_array)
-    assert textutil.is_annotated(passage, as_array=as_array), "Passage %s is not annotated" % passage.ID
+        assert textutil.is_annotated(passage, as_array=as_array, as_extra=not as_array), \
+            "Passage %s is not pre-annotated" % passage.ID
+    textutil.annotate(passage, as_array=as_array, as_extra=not as_array)
+    assert textutil.is_annotated(passage, as_array=as_array, as_extra=not as_array), \
+        "Passage %s is not annotated" % passage.ID
     for terminal in l0.all:
         for i, (attr, value) in enumerate(zip(textutil.Attr, attr_values)):
             if value:
