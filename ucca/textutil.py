@@ -233,11 +233,15 @@ def is_annotated(passage, as_array=False, as_extra=True):
     """Whether the passage is already annotated or only partially annotated"""
     l0 = passage.layer(layer0.LAYER_ID)
     docs = l0.extra.get("doc")
-    return as_array and (
-        not l0.all or docs is not None and len(docs) == max(t.paragraph for t in l0.all) and
-        sum(map(len, docs)) == len(l0.all) and
-        all(i is None or isinstance(i, int) for l in docs for t in l for i in t)) or \
-        as_extra and all(a.key in t.extra for t in l0.all for a in Attr)
+    if as_array:
+        if not (not l0.all or docs is not None and len(docs) == max(t.paragraph for t in l0.all) and
+                sum(map(len, docs)) == len(l0.all) and
+                all(i is None or isinstance(i, int) for l in docs for t in l for i in t)):
+            return False
+    if as_extra:
+        if not all(a.key in t.extra for t in l0.all for a in Attr):
+            return False
+    return True
 
 
 def set_docs(annotated, as_array, as_extra, lang, vocab, replace, verbose):
