@@ -187,7 +187,8 @@ def annotate(passage, *args, **kwargs):
 
 def annotate_as_tuples(passages, replace=False, as_array=False, as_extra=True, lang="en", vocab=None, verbose=False):
     for passage_lang, passages_by_lang in groupby(passages, get_lang):
-        for need_annotation, stream in groupby(to_annotate(passages_by_lang, replace, as_array), lambda x: bool(x[0])):
+        for need_annotation, stream in groupby(to_annotate(passages_by_lang, replace, as_array, as_extra),
+                                               lambda x: bool(x[0])):
             annotated = get_nlp(passage_lang or lang).pipe(
                 stream, as_tuples=True, n_threads=N_THREADS, batch_size=BATCH_SIZE) if need_annotation else stream
             annotated = set_docs(annotated, as_array, as_extra, passage_lang or lang, vocab, replace, verbose)
