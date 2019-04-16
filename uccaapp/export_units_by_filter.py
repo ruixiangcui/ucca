@@ -1,4 +1,6 @@
 import argparse
+import os
+import urllib.request
 
 from ucca import layer1, convert
 from uccaapp.download_task import TaskDownloader
@@ -8,6 +10,24 @@ desc = "Get all units according to a specified filter. Units that meet any of th
 CONSECUTIVE = "CONSECUTIVE"
 SUBSEQUENCE = "SUBSEQUENCE"
 SUBSET = "SUBSET"
+
+
+def read_amr_roles(role_type):
+    file_name = "have-" + role_type + "-role-91-roles-v1.06.txt"
+    if not os.path.exists(file_name):
+        url = r"http://amr.isi.edu/download/lists/" + file_name
+        try:
+            urllib.request.urlretrieve(url, file_name)
+        except OSError as e:
+            raise IOError("Must download %s and have it in the current directory when running the script" % url) from e
+    with open(file_name) as f:
+        return [line.split()[1] for line in map(str.strip, f) if line and not line.startswith(("#", "MAYBE"))]
+
+
+AMR_ROLE = {role for role_type in ("org", "rel") for role in read_amr_roles(role_type)}
+TOKEN_CLASSES = {
+    "[ROLE]": AMR_ROLE
+}
 
 
 def get_top_level_ancestor(node):
@@ -48,6 +68,15 @@ def tokens_match(tokens1, tokens2, mode):
 
 def main(output=None, comment=False, sentence_level=False, categories=(), tokens=(), tokens_mode=CONSECUTIVE,
          case_insensitive=False, write=False, **kwargs):
+    expanded_tokens = []
+    for token in tokens:
+        expanded = TOKEN_CLASSES.get(token)
+        if expanded:
+            expanded_tokens.extend(expanded)
+        else:
+            expanded_tokens.append(token)
+    tokens = expanded_tokens
+
     filtered_nodes = []
     for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(write=False, **kwargs):
         if sentence_level:
