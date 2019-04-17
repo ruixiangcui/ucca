@@ -46,7 +46,7 @@ def match_passage_text(passage, matchers, out):
     for paragraph, terminals in groupby(passage_tokens, key=attrgetter("paragraph")):
         tokens = [terminal.text for terminal in terminals]
         no_space_text = "".join(tokens)
-        match = next(filter(None, (matcher(no_space_text) for matcher in matchers)))
+        match = next(filter(None, (matcher(no_space_text) for matcher in matchers)), "@@@" + " ".join(tokens))
         print(passage.ID, match, sep="\t", file=out)
 
 
