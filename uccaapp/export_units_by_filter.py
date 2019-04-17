@@ -68,7 +68,8 @@ def tokens_match(tokens1, tokens2, mode):
 
 
 def main(output=None, comment=False, sentence_level=False, categories=(), tokens=(), tokens_mode=CONSECUTIVE,
-         case_insensitive=False, write=False, **kwargs):
+         case_insensitive=False, **kwargs):
+    kwargs["write"] = False
     expanded_tokens = []
     for token in tokens:
         expanded = TOKEN_CLASSES.get(token)
@@ -79,7 +80,7 @@ def main(output=None, comment=False, sentence_level=False, categories=(), tokens
     tokens = expanded_tokens
 
     filtered_nodes = []
-    for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(write=False, **kwargs):
+    for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(**kwargs):
         if sentence_level:
             cur_passages = convert.split2sentences(passage)
             all_nodes = [p.layer(layer1.LAYER_ID).heads[0] for p in cur_passages]
