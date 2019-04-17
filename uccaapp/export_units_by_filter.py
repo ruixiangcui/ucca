@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 import urllib.request
 
 from ucca import layer1, convert
@@ -99,13 +100,13 @@ def main(output=None, comment=False, sentence_level=False, categories=(), tokens
                 intersection = set(categories).intersection(all_tags)
                 if intersection:
                     filtered_nodes.append((str(intersection), node, task_id, user_id))
-
+    f = open(output, 'w', encoding="utf-8") if output else sys.stdout
+    for filter_type, node, task_id, user_id in filtered_nodes:
+        ancestor = get_top_level_ancestor(node)
+        print(filter_type, task_id, user_id, node.extra.get("tree_id"), node.to_text(),
+              ancestor, str(node.extra.get("remarks")).replace("\n", "|"), file=f, sep="\t")
     if output:
-        with open(output, 'w', encoding="utf-8") as f:
-            for filter_type, node, task_id, user_id in filtered_nodes:
-                ancestor = get_top_level_ancestor(node)
-                print(filter_type, task_id, user_id, node.extra.get("tree_id"), node.to_text(),
-                      ancestor, str(node.extra.get("remarks")).replace("\n", "|"), file=f, sep="\t")
+        f.close()
 
 
 if __name__ == "__main__":
