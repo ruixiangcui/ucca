@@ -68,18 +68,16 @@ def tokens_match(tokens1, tokens2, mode):
 
 
 def expand_tokens(tokens):
-    expanded_tokens = []
     for token in tokens:
         expanded = TOKEN_CLASSES.get(token)
         if expanded:
-            expanded_tokens.extend(expanded)
+            yield from expanded
         else:
-            expanded_tokens.append(token)
-    return expanded_tokens
+            yield token
 
 
-def filter_nodes(categories, tokens, tokens_mode, case_insensitive, comment, sentence_level, **kwargs):
-    filtered_nodes = []
+def filter_nodes(categories=(), tokens=(), tokens_mode=CONSECUTIVE, case_insensitive=False, comment=False,
+                 sentence_level=False, **kwargs):
     for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(**kwargs):
         if sentence_level:
             cur_passages = convert.split2sentences(passage)
@@ -88,38 +86,30 @@ def filter_nodes(categories, tokens, tokens_mode, case_insensitive, comment, sen
             all_nodes = list(passage.layer(layer1.LAYER_ID).all)
         for node in all_nodes:
             if comment and node.extra.get("remarks"):
-                filtered_nodes.append(("comment", node, task_id, user_id))
+                yield "comment", node, task_id, user_id
             if tokens and not node.attrib.get("implicit"):
                 unit_tokens = [t.text for t in node.get_terminals(punct=True)]
                 if case_insensitive:
                     unit_tokens = [x.lower() for x in unit_tokens]
                     tokens = [x.lower() for x in tokens]
                 if tokens_match(unit_tokens, tokens, tokens_mode):
-                    filtered_nodes.append(('TOKENS', node, task_id, user_id))
+                    yield 'TOKENS', node, task_id, user_id
             else:
                 all_tags = [c.tag for edge in node for c in edge.categories]
                 intersection = set(categories).intersection(all_tags)
                 if intersection:
-                    filtered_nodes.append((str(intersection), node, task_id, user_id))
-    return filtered_nodes
+                    yield str(intersection), node, task_id, user_id
 
 
-def write_output(filtered_nodes, output):
+def main(output=None, tokens=(), **kwargs):
+    kwargs["write"] = False
     f = open(output, 'w', encoding="utf-8") if output else sys.stdout
-    for filter_type, node, task_id, user_id in filtered_nodes:
+    for filter_type, node, task_id, user_id in filter_nodes(tokens=list(expand_tokens(tokens)), **kwargs):
         ancestor = get_top_level_ancestor(node)
         print(filter_type, task_id, user_id, node.extra.get("tree_id"), node.to_text(),
-              ancestor, str(node.extra.get("remarks")).replace("\n", "|"), file=f, sep="\t")
+              ancestor, str(node.extra.get("remarks")).replace("\n", "|"), file=f, sep="\t", flush=True)
     if output:
         f.close()
-
-
-def main(output=None, comment=False, sentence_level=False, categories=(), tokens=(), tokens_mode=CONSECUTIVE,
-         case_insensitive=False, **kwargs):
-    kwargs["write"] = False
-    tokens = expand_tokens(tokens)
-    filtered_nodes = filter_nodes(categories, tokens, tokens_mode, case_insensitive, comment, sentence_level, **kwargs)
-    write_output(filtered_nodes, output)
 
 
 if __name__ == "__main__":
