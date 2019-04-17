@@ -304,7 +304,8 @@ def break2sentences(passage, lang="en", *args, **kwargs):
             # in any way (hence it probably just "hangs" there), it's a sentence end
             if terminal.text in SENTENCE_END_MARKS and \
                     (terminal.position in ps_ends or
-                     (terminal.position - 1) in ps_ends and terminal.position not in ps_starts):
+                     (terminal.position - 1) in ps_ends and terminal.position not in ps_starts) or \
+                    terminal.position - 1 in marks and layer0.is_punct(terminal):
                 marks.append(terminal.position)
     else:  # Not labeled, split using spaCy
         annotated = get_nlp(lang=lang)([t.text for t in terminals])
