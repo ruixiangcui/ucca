@@ -12,7 +12,7 @@ from .conftest import crossing, multi_sent, multi_sent_with_quotes, l1_passage, 
         (discontiguous, [20]),
         (l1_passage, [20]),
         (empty, []),
-        (multi_sent_with_quotes, [5, 9, 13]),  # FIXME should be 6, 9, 13
+        (multi_sent_with_quotes, [6, 9, 13]),
 ))
 def test_break2sentences(create, breaks):
     """Tests identifying correctly sentence ends. """

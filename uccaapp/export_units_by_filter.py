@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import urllib.request
+from itertools import product
 
 from ucca import layer1, convert
 from uccaapp.download_task import TaskDownloader
@@ -46,67 +47,95 @@ def get_top_level_ancestor(node):
     return parent
 
 
-def tokens_match(tokens1, tokens2, mode):
+def tokens_match(unit_tokens, query_tokens, mode):
     """
-    Returns True iff tokens2 is contained in tokens1.
-    mode can be CONSECUTIVE, SUBSET, SUBSEQUENCE
-    :param tokens1:
-    :param tokens2:
-    :param mode:
+    :param unit_tokens: candidate unit tokens, as a list of strings
+    :param query_tokens: list of lists of tokens to look for, each list representing alternatives for a position
+    :param mode: CONSECUTIVE, SUBSET, SUBSEQUENCE
+    :return whether query_tokens is contained in unit_tokens
     """
     if mode == SUBSET:
-        return set(tokens2).issubset(tokens1)
-    try:
-        indices = [tokens1.index(t) for t in tokens2]
-        if mode == CONSECUTIVE:
-            return indices == list(range(indices[0], indices[0] + len(indices)))
-        elif mode == SUBSEQUENCE:
-            return indices == sorted(indices)
-    except ValueError:
-        return False
+        return any(set(query).issubset(unit_tokens) for query in product(*query_tokens))
+    indices = []
+    for alternatives in query_tokens:
+        index = None
+        for alternative in alternatives:
+            try:
+                index = unit_tokens.index(alternative)
+            except ValueError:
+                pass
+        if index is None:
+            return False
+        indices.append(index)
+    if mode == CONSECUTIVE:
+        return indices == list(range(indices[0], indices[-1] + 1))
+    elif mode == SUBSEQUENCE:
+        return indices == sorted(indices)
     raise ValueError("Invalid option for token mode: " + mode)
 
 
-def main(output = None, comment = False, sentence_level = False, categories = (), tokens = (), tokens_mode = CONSECUTIVE,
-         case_insensitive = False, tokens_by_file = False, remotes = False, write = False, **kwargs):
-    if tokens_by_file:
-        with open(tokens[0]) as f:
-            token_lists = [line.strip().split() for line in f]
-    elif tokens != ():
-        token_lists = [tokens]
-    else:
-        token_lists = ()
+## def main(output = None, comment = False, sentence_level = False, categories = (), tokens = (), tokens_mode = CONSECUTIVE,
+##          case_insensitive = False, tokens_by_file = False, remotes = False, write = False, **kwargs):
+##     if tokens_by_file:
+##         with open(tokens[0]) as f:
+##             token_lists = [line.strip().split() for line in f]
+##     elif tokens != ():
+##         token_lists = [tokens]
+##     else:
+##         token_lists = ()
 
-    filtered_nodes = []
-    for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(write=False, **kwargs):
-        if sentence_level:
-            cur_passages = convert.split2sentences(passage)
-            all_nodes = [p.layer(layer1.LAYER_ID).heads[0] for p in cur_passages]
-        else:
-            all_nodes = list(passage.layer(layer1.LAYER_ID).all)
-        for node in all_nodes:
+##     filtered_nodes = []
+##     for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(write=False, **kwargs):
+##         if sentence_level:
+##             cur_passages = convert.split2sentences(passage)
+##             all_nodes = [p.layer(layer1.LAYER_ID).heads[0] for p in cur_passages]
+##         else:
+##             all_nodes = list(passage.layer(layer1.LAYER_ID).all)
+##         for node in all_nodes:
+##             if comment and node.extra.get("remarks"):
+##                 filtered_nodes.append(("comment",node,task_id,user_id))
+##             if remotes and len([n for n in node.outgoing if n.attrib.get("remote")]) > 0:
+##                 filtered_nodes.append(("remotes", node, task_id, user_id))
+##             if token_lists and not node.attrib.get("implicit"):
+##                 for token_list in token_lists:
+##                     unit_tokens = [t.text for t in node.get_terminals(punct=True)]
+##                     if case_insensitive:
+##                         unit_tokens = [x.lower() for x in unit_tokens]
+##                         token_list = [x.lower() for x in token_list]
+##                     if tokens_match(unit_tokens, token_list, tokens_mode):
+##                         filtered_nodes.append(('TOKENS', node, task_id, user_id))
+##             else:
+##                 all_tags = [c.tag for edge in node for c in edge.categories]
+##                 intersection = set(categories).intersection(all_tags)
+
+def filter_nodes(categories=(), tokens=(), tokens_mode=CONSECUTIVE, case_insensitive=False, comment=False,
+                 sentence_level=False, **kwargs):
+    for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(**kwargs):
+        for node in [p.layer(layer1.LAYER_ID).heads[0] for p in convert.split2sentences(passage)] if sentence_level \
+                else passage.layer(layer1.LAYER_ID).all:
             if comment and node.extra.get("remarks"):
-                filtered_nodes.append(("comment",node,task_id,user_id))
-            if remotes and len([n for n in node.outgoing if n.attrib.get("remote")]) > 0:
-                filtered_nodes.append(("remotes", node, task_id, user_id))
-            if token_lists and not node.attrib.get("implicit"):
-                for token_list in token_lists:
-                    unit_tokens = [t.text for t in node.get_terminals(punct=True)]
-                    if case_insensitive:
-                        unit_tokens = [x.lower() for x in unit_tokens]
-                        token_list = [x.lower() for x in token_list]
-                    if tokens_match(unit_tokens, token_list, tokens_mode):
-                        filtered_nodes.append(('TOKENS', node, task_id, user_id))
-            else:
-                all_tags = [c.tag for edge in node for c in edge.categories]
-                intersection = set(categories).intersection(all_tags)
+                yield "comment", node, task_id, user_id
+            if tokens and not node.attrib.get("implicit"):
+                unit_tokens = [t.text for t in node.get_terminals(punct=True)]
+                if case_insensitive:
+                    unit_tokens = [x.lower() for x in unit_tokens]
+                    tokens = [x.lower() for x in tokens]
+                if tokens_match(unit_tokens, tokens, tokens_mode):
+                    yield 'TOKENS', node, task_id, user_id
+            elif categories:
+                intersection = set(categories).intersection(c.tag for e in node for c in e.categories)
                 if intersection:
-                    filtered_nodes.append((str(intersection), node, task_id, user_id))
+                    yield str(intersection), node, task_id, user_id
+
+
+def main(output=None, tokens=(), **kwargs):
+    kwargs["write"] = False
     f = open(output, 'w', encoding="utf-8") if output else sys.stdout
-    for filter_type, node, task_id, user_id in filtered_nodes:
+    expanded_tokens = [TOKEN_CLASSES.get(token, [token]) for token in tokens]
+    for filter_type, node, task_id, user_id in filter_nodes(tokens=expanded_tokens, **kwargs):
         ancestor = get_top_level_ancestor(node)
         print(filter_type, task_id, user_id, node.extra.get("tree_id"), node.to_text(),
-              ancestor, str(node.extra.get("remarks")).replace("\n", "|"), file=f, sep="\t")
+              ancestor, str(node.extra.get("remarks")).replace("\n", "|"), file=f, sep="\t", flush=True)
     if output:
         f.close()
 

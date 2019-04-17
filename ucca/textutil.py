@@ -296,19 +296,24 @@ def break2sentences(passage, lang="en", *args, **kwargs):
     if any(n.outgoing for n in l1.all):  # Passage is labeled
         ps_ends = [ps.end_position for ps in l1.top_scenes]
         ps_starts = [ps.start_position for ps in l1.top_scenes]
-        marks = [t.position for t in terminals if t.text in SENTENCE_END_MARKS]
-        # Annotations doesn't always include the ending period (or other mark)
-        # with the parallel scene it closes. Hence, if the terminal before the
-        # mark closed the parallel scene, and this mark doesn't open a scene
-        # in any way (hence it probably just "hangs" there), it's a sentence end
-        marks = [x for x in marks if x in ps_ends or ((x - 1) in ps_ends and x not in ps_starts)]
+        marks = []
+        for terminal in terminals:
+            # Annotations doesn't always include the ending period (or other mark)
+            # with the parallel scene it closes. Hence, if the terminal before the
+            # mark closed the parallel scene, and this mark doesn't open a scene
+            # in any way (hence it probably just "hangs" there), it's a sentence end
+            if terminal.text in SENTENCE_END_MARKS and \
+                    (terminal.position in ps_ends or
+                     (terminal.position - 1) in ps_ends and terminal.position not in ps_starts) or \
+                    terminal.position - 1 in marks and layer0.is_punct(terminal):
+                marks.append(terminal.position)
     else:  # Not labeled, split using spaCy
         annotated = get_nlp(lang=lang)([t.text for t in terminals])
         marks = [span.end for span in annotated.sents]
     marks = sorted(set(marks + break2paragraphs(passage)))
-    # Avoid punctuation-only sentences
+    # Avoid punctuation-only sentences by picking the last punctuation symbol in each consecutive sequence
     if len(marks) > 1:
-        marks = [x for x, y in zip(marks[:-1], marks[1:]) if not all(layer0.is_punct(t) for t in terminals[x:y])] + \
+        marks = [x for x, y in zip(marks[:-1], marks[1:]) if not all(map(layer0.is_punct, terminals[x:y]))] + \
                 [marks[-1]]
     return marks
 
