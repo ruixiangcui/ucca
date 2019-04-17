@@ -307,7 +307,7 @@ def break2sentences(passage, lang="en", *args, **kwargs):
                     (terminal.position in ps_ends or
                      (terminal.position - 1) in ps_ends and terminal.position not in ps_starts) or \
                     terminal.position - 1 in marks and layer0.is_punct(terminal) and not \
-                    (terminal.text in QUOTES and terminal.text == terminals[marks[-1]].text):
+                    (terminal.text in QUOTES and terminal.text == terminals[marks[-1] - 1].text):
                 marks.append(terminal.position)
     else:  # Not labeled, split using spaCy
         annotated = get_nlp(lang=lang)([t.text for t in terminals])
@@ -315,7 +315,7 @@ def break2sentences(passage, lang="en", *args, **kwargs):
     marks = sorted(set(marks + break2paragraphs(passage)))
     # Avoid punctuation-only sentences by picking the last punctuation symbol in each consecutive sequence
     if len(marks) > 1:
-        marks = [x for x, y in zip(marks[:-1], marks[1:]) if not all(map(layer0.is_punct, terminals[x:y]))] + \
+        marks = [x for x, y in zip(marks[:-1], marks[1:]) if not all(map(layer0.is_punct, terminals[x - 1:y - 1]))] + \
                 [marks[-1]]
     return marks
 
