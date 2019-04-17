@@ -70,15 +70,7 @@ def tokens_match(tokens1, tokens2, mode):
 def main(output=None, comment=False, sentence_level=False, categories=(), tokens=(), tokens_mode=CONSECUTIVE,
          case_insensitive=False, **kwargs):
     kwargs["write"] = False
-    expanded_tokens = []
-    for token in tokens:
-        expanded = TOKEN_CLASSES.get(token)
-        if expanded:
-            expanded_tokens.extend(expanded)
-        else:
-            expanded_tokens.append(token)
-    tokens = expanded_tokens
-
+    tokens = expand_tokens(tokens)
     filtered_nodes = []
     for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(**kwargs):
         if sentence_level:
@@ -108,6 +100,18 @@ def main(output=None, comment=False, sentence_level=False, categories=(), tokens
               ancestor, str(node.extra.get("remarks")).replace("\n", "|"), file=f, sep="\t")
     if output:
         f.close()
+
+
+def expand_tokens(tokens):
+    expanded_tokens = []
+    for token in tokens:
+        expanded = TOKEN_CLASSES.get(token)
+        if expanded:
+            expanded_tokens.extend(expanded)
+        else:
+            expanded_tokens.append(token)
+    tokens = expanded_tokens
+    return tokens
 
 
 if __name__ == "__main__":
