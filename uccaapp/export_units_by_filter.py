@@ -67,10 +67,18 @@ def tokens_match(tokens1, tokens2, mode):
     raise ValueError("Invalid option for token mode: " + mode)
 
 
-def main(output=None, comment=False, sentence_level=False, categories=(), tokens=(), tokens_mode=CONSECUTIVE,
-         case_insensitive=False, **kwargs):
-    kwargs["write"] = False
-    tokens = expand_tokens(tokens)
+def expand_tokens(tokens):
+    expanded_tokens = []
+    for token in tokens:
+        expanded = TOKEN_CLASSES.get(token)
+        if expanded:
+            expanded_tokens.extend(expanded)
+        else:
+            expanded_tokens.append(token)
+    return expanded_tokens
+
+
+def filter_nodes(categories, tokens, tokens_mode, case_insensitive, comment, sentence_level, **kwargs):
     filtered_nodes = []
     for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(**kwargs):
         if sentence_level:
@@ -93,6 +101,10 @@ def main(output=None, comment=False, sentence_level=False, categories=(), tokens
                 intersection = set(categories).intersection(all_tags)
                 if intersection:
                     filtered_nodes.append((str(intersection), node, task_id, user_id))
+    return filtered_nodes
+
+
+def write_output(filtered_nodes, output):
     f = open(output, 'w', encoding="utf-8") if output else sys.stdout
     for filter_type, node, task_id, user_id in filtered_nodes:
         ancestor = get_top_level_ancestor(node)
@@ -102,16 +114,12 @@ def main(output=None, comment=False, sentence_level=False, categories=(), tokens
         f.close()
 
 
-def expand_tokens(tokens):
-    expanded_tokens = []
-    for token in tokens:
-        expanded = TOKEN_CLASSES.get(token)
-        if expanded:
-            expanded_tokens.extend(expanded)
-        else:
-            expanded_tokens.append(token)
-    tokens = expanded_tokens
-    return tokens
+def main(output=None, comment=False, sentence_level=False, categories=(), tokens=(), tokens_mode=CONSECUTIVE,
+         case_insensitive=False, **kwargs):
+    kwargs["write"] = False
+    tokens = expand_tokens(tokens)
+    filtered_nodes = filter_nodes(categories, tokens, tokens_mode, case_insensitive, comment, sentence_level, **kwargs)
+    write_output(filtered_nodes, output)
 
 
 if __name__ == "__main__":
