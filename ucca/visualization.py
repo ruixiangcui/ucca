@@ -123,7 +123,7 @@ def tikz(p, indent=None, node_ids=False):
          + "} ") if p.terminals or p.attrib.get("implicit") else ("\n" + indent * "  ").join(
             ["[circle] {%s}" % (node_label(p) or (p.ID if node_ids else "")), "{"] +
             ["child {" + tikz(e.child, indent + 1) +
-             " edge from parent node[auto]  {\scriptsize $" + "|".join(e.tags) + "$}}"
+             " edge from parent node[auto]  {" + "|".join(e.tags) + "}}"
              for e in sorted(p, key=lambda f: f.child.start_position)
              if not e.attrib.get("remote")] +
             ["}"]))
