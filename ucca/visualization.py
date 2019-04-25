@@ -85,24 +85,13 @@ def tex_escape(text):
 
 
 def tikz(p, indent=None, node_ids=False):
-    # child {node (After) [word] {After} edge from parent node[above] {\scriptsize $L$}}
-    # child {node (graduation) [circle] {}
-    # {
-    # child {node [word] {graduation} edge from parent node[left] {\scriptsize $P$}}
-    # } edge from parent node[right] {\scriptsize $H$} }
-    # child {node [word] {,} edge from parent node[below] {\scriptsize $U$}}
-    # child {node (moved) [circle] {}
-    # {
-    # child {node (John) [word] {John} edge from parent node[left] {\scriptsize $A$}}
-    # child {node [word] {moved} edge from parent node[left] {\scriptsize $P$}}
-    # child {node [circle] {}
-    # {
-    # child {node [word] {to} edge from parent node[left] {\scriptsize $R$}}
-    # child {node [word] {Paris} edge from parent node[right] {\scriptsize $C$}}
-    # } edge from parent node[right] {\scriptsize $A$} }
-    # } edge from parent node[right] {\scriptsize $H$} }
-    # ;
-    # \draw[dashed,->] (graduation) to node [auto] {\scriptsize $A$} (John);
+    """
+    Visualize to TikZ format
+    :param p: Passage
+    :param indent: indentation size or None for no indentation
+    :param node_ids: whether to include node IDs
+    :return: string in TikZ format
+    """
     if indent is None:
         l1 = p.layer(layer1.LAYER_ID)
         return r"""
@@ -113,7 +102,7 @@ def tikz(p, indent=None, node_ids=False):
   every circle node/.append style={%s=black}]
   \tikzstyle{word} = [font=\rmfamily,color=black]
   """ % ("draw" if node_ids else "fill") + "\\" + tikz(l1.heads[0], indent=1, node_ids=node_ids) + \
-            "\n".join([";"] + ["  \draw[dashed,->] (%s) to node [auto] {\scriptsize $%s$} (%s);" %
+            "\n".join([";"] + [r"  \draw[dashed,->] (%s) to node [auto] {%s} (%s);" %
                                (e.parent.ID.replace(".", "_"), "|".join(e.tags), e.child.ID.replace(".", "_"))
                                for n in l1.all for e in n if e.attrib.get("remote")] + [r"\end{tikzpicture}"])
     return "node (" + p.ID.replace(".", "_") + ") " + (
@@ -127,3 +116,34 @@ def tikz(p, indent=None, node_ids=False):
              for e in sorted(p, key=lambda f: f.child.start_position)
              if not e.attrib.get("remote")] +
             ["}"]))
+
+
+def standoff(p):
+    """
+    Visualize to Standoff .ann format, which can be presented with brat
+    :param p: Passage
+    :return: string in Standoff format
+    """
+    l0 = p.layer(layer0.LAYER_ID)
+    terminal_start = {}
+    terminal_end = {}
+    start = end = 0
+    for terminal in sorted(l0.all, key=attrgetter("position")):
+        terminal_start[terminal.ID] = start
+        end += len(terminal.text)
+        terminal_end[terminal.ID] = end
+        end += 1
+        start = end
+    tag_to_category = {v: k for k, v in layer1.EdgeTags.__dict__.items() if not k.startswith("__")}
+    l1 = p.layer(layer1.LAYER_ID)
+    lines = [l1.heads[0].to_text()]
+    for unit in l1.all:
+        if unit.tag == layer1.NodeTags.Foundational and unit.ftag:
+            terminals = unit.get_terminals()
+            if terminals:
+                lines.append("\t".join(("T" + unit.ID.split(unit.ID_SEPARATOR)[-1],
+                                        "%s %d %d" % (tag_to_category.get(unit.ftag, unit.ftag),
+                                                      terminal_start[terminals[0].ID],
+                                                      terminal_end[terminals[-1].ID]),
+                                        unit.to_text())))
+    return "\n".join(lines)
