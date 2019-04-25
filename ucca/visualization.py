@@ -3,7 +3,7 @@ import warnings
 from collections import defaultdict
 from operator import attrgetter
 
-from ucca import layer0, layer1
+from ucca import core, layer0, layer1
 
 
 def node_label(node):
@@ -136,14 +136,22 @@ def standoff(p):
         start = end
     tag_to_category = {v: k for k, v in layer1.EdgeTags.__dict__.items() if not k.startswith("__")}
     l1 = p.layer(layer1.LAYER_ID)
+    remote_counter = 1
     lines = [l1.heads[0].to_text()]
     for unit in l1.all:
-        if unit.tag == layer1.NodeTags.Foundational and unit.ftag:
+        if unit.tag == layer1.NodeTags.Foundational and unit.ftags:
             terminals = unit.get_terminals()
             if terminals:
-                lines.append("\t".join(("T" + unit.ID.split(unit.ID_SEPARATOR)[-1],
-                                        "%s %d %d" % (tag_to_category.get(unit.ftag, unit.ftag),
+                lines.append("\t".join(("T" + unit.ID.split(core.Node.ID_SEPARATOR)[-1],
+                                        "%s %d %d" % ("|".join(tag_to_category.get(tag, tag) for tag in unit.ftags),
                                                       terminal_start[terminals[0].ID],
                                                       terminal_end[terminals[-1].ID]),
                                         unit.to_text())))
+            for edge in unit.incoming:
+                if edge.attrib.get("remote"):
+                    lines.append("\t".join(("R%d" % remote_counter,
+                                            " ".join(("|".join(tag_to_category.get(tag, tag) for tag in edge.tags),
+                                                      "parent:T" + edge.parent.ID.split(core.Node.ID_SEPARATOR)[-1],
+                                                      "child:T" + edge.child.ID.split(core.Node.ID_SEPARATOR)[-1])))))
+                    remote_counter += 1
     return "\n".join(lines)
