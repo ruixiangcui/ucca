@@ -142,10 +142,17 @@ def standoff(p):
         if unit.tag == layer1.NodeTags.Foundational and unit.ftags:
             terminals = unit.get_terminals()
             if terminals:
+                spans = []
+                for terminal in terminals:
+                    start = terminal_start[terminal.ID]
+                    end = terminal_end[terminal.ID]
+                    if not spans or spans[-1][1] < start - 1:
+                        spans.append((start, end))
+                    else:
+                        spans[-1] = (spans[-1][0], end)
                 lines.append("\t".join(("T" + unit.ID.split(core.Node.ID_SEPARATOR)[-1],
-                                        "%s %d %d" % ("|".join(tag_to_category.get(tag, tag) for tag in unit.ftags),
-                                                      terminal_start[terminals[0].ID],
-                                                      terminal_end[terminals[-1].ID]),
+                                        "|".join(tag_to_category.get(tag, tag) for tag in unit.ftags) + " " +
+                                        ";".join("%d %d" % (s, e) for s, e in spans),
                                         unit.to_text())))
             for edge in unit.incoming:
                 if edge.attrib.get("remote"):
