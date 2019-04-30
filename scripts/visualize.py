@@ -2,7 +2,7 @@ import os
 from argparse import ArgumentParser
 
 from ucca import visualization, layer0
-from ucca.ioutil import get_passages_with_progress_bar, external_write_mode
+from ucca.ioutil import get_passages, get_passages_with_progress_bar, external_write_mode
 
 
 def print_text(args, text, suffix):
@@ -20,7 +20,10 @@ def main(args):
         if not args.tikz:
             import matplotlib
             matplotlib.use('Agg')
-    for passage in get_passages_with_progress_bar(args.passages, desc="Visualizing"):
+    to_stdout = (args.tikz or args.standoff) and not args.out_dir
+    t = args.passages
+    t = get_passages(t) if to_stdout else get_passages_with_progress_bar(t, desc="Visualizing")
+    for passage in t:
         if args.tikz:
             print_text(args, visualization.tikz(passage), passage.ID + ".tikz.txt")
         elif args.standoff:
