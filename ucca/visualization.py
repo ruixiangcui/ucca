@@ -3,7 +3,7 @@ import warnings
 from collections import defaultdict
 from operator import attrgetter
 
-from ucca import core, layer0, layer1
+from ucca import layer0, layer1
 
 
 def node_label(node):
@@ -138,27 +138,29 @@ def standoff(p):
     l1 = p.layer(layer1.LAYER_ID)
     remote_counter = 1
     lines = [l1.heads[0].to_text()]
-    for unit in l1.all:
-        if unit.tag == layer1.NodeTags.Foundational and unit.ftags:
-            terminals = unit.get_terminals()
-            if terminals:
-                spans = []
-                for terminal in terminals:
-                    start = terminal_start[terminal.ID]
-                    end = terminal_end[terminal.ID]
-                    if not spans or spans[-1][1] < start - 1:
-                        spans.append((start, end))
-                    else:
-                        spans[-1] = (spans[-1][0], end)
-                lines.append("\t".join(("T" + unit.ID.split(core.Node.ID_SEPARATOR)[-1],
-                                        "|".join(tag_to_category.get(tag, tag) for tag in unit.ftags) + " " +
-                                        ";".join("%d %d" % (s, e) for s, e in spans),
-                                        unit.to_text())))
-            for edge in unit.incoming:
-                if edge.attrib.get("remote"):
-                    lines.append("\t".join(("R%d" % remote_counter,
-                                            " ".join(("|".join(tag_to_category.get(tag, tag) for tag in edge.tags),
-                                                      "parent:T" + edge.parent.ID.split(core.Node.ID_SEPARATOR)[-1],
-                                                      "child:T" + edge.child.ID.split(core.Node.ID_SEPARATOR)[-1])))))
-                    remote_counter += 1
+    units = [unit for unit in l1.all if unit.tag == layer1.NodeTags.Foundational and unit.ftags]
+    units = sorted(units, key=attrgetter("start_position", "end_position"))
+    unit_to_id = {unit.ID: str(i) for i, unit in enumerate(units, start=1)}
+    for unit in units:
+        terminals = unit.get_terminals()
+        if terminals:
+            spans = []
+            for terminal in terminals:
+                start = terminal_start[terminal.ID]
+                end = terminal_end[terminal.ID]
+                if not spans or spans[-1][1] < start - 1:
+                    spans.append((start, end))
+                else:
+                    spans[-1] = (spans[-1][0], end)
+            lines.append("\t".join(("T" + unit_to_id[unit.ID],
+                                    "|".join(tag_to_category.get(tag, tag) for tag in unit.ftags) + " " +
+                                    ";".join("%d %d" % (s, e) for s, e in spans),
+                                    unit.to_text())))
+        for edge in unit.incoming:
+            if edge.attrib.get("remote"):
+                lines.append("\t".join(("R%d" % remote_counter,
+                                        " ".join(("|".join(tag_to_category.get(tag, tag) for tag in edge.tags),
+                                                  "parent:T" + unit_to_id[edge.parent.ID],
+                                                  "child:T" + unit_to_id[edge.child.ID])))))
+                remote_counter += 1
     return "\n".join(lines)
