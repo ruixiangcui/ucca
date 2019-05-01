@@ -470,6 +470,7 @@ def to_site(passage):
                                     SiteCfg.Attr.Uncertain: uncertain,
                                     SiteCfg.Attr.Suggestion: suggestion})
         state.elems[node.fparent.ID].insert(0, implicit_elem)
+        state.update(implicit_elem, node)
 
     def _linkage(link):
         args = [str(state.mapping[x.ID]) for x in link.arguments]
@@ -559,12 +560,12 @@ def to_site(passage):
             break
 
     # Handling remotes, implicits and linkages
-    for remote in [e for n in passage.layer(layer1.LAYER_ID).all
-                   for e in n if e.attrib.get('remote')]:
-        _remote(remote)
     for implicit in [n for n in passage.layer(layer1.LAYER_ID).all
                      if n.attrib.get('implicit')]:
         _implicit(implicit)
+    for remote in [e for n in passage.layer(layer1.LAYER_ID).all
+                   for e in n if e.attrib.get('remote')]:
+        _remote(remote)
     for linkage in filter(lambda x: x.tag == layer1.NodeTags.Linkage,
                           passage.layer(layer1.LAYER_ID).heads):
         _linkage(linkage)
