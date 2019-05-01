@@ -3,8 +3,9 @@
 import argparse
 import csv
 import os
-from unidecode import unidecode
 from xml.etree.ElementTree import Element
+
+from unidecode import unidecode
 
 from ucca.convert import to_site, from_site, SiteCfg, SiteUtil
 from ucca.ioutil import get_passages_with_progress_bar, write_passage
@@ -107,7 +108,7 @@ def insert_retokenized_currency(i, terminals, preterminals,
                                 tokens, state):
     if len(tokens) == 2 and tokens[0] in CURRENCIES and \
             (tokens[1].replace('.', '', 1).isdigit() or
-             tokens[1].replace(',', '')).isdigit():
+             tokens[1].replace(',', '').isdigit()):
         terminals[i].text = tokens[1]
         index_to_insert = preterminal_parents[i].getchildren(). \
             index(preterminals[i])
