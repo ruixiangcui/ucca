@@ -280,8 +280,12 @@ def _parse_site_units(elem, parent, passage, groups, elem2node):
             # Note that for discontiguous units we have a different work_elem,
             # because all the data on them are stored outside the hierarchy
             work_elem = _get_work_elem(elem)
-            edge_tags = [(SiteCfg.TagConversion[tag],)
-                         for tag in work_elem.get(SiteCfg.Attr.ElemTag, "").split("|") or None]
+            try:
+                edge_tags = [(SiteCfg.TagConversion[tag],)
+                             for tag in work_elem.get(SiteCfg.Attr.ElemTag, "").split("|") or None]
+            except KeyError as e:
+                raise ValueError("Invalid edge tag in node " + work_elem.get(SiteCfg.Attr.SiteID) + ": '" +
+                                 work_elem.get(SiteCfg.Attr.ElemTag) + "'") from e
             attrib = {}
             if work_elem.get(SiteCfg.Attr.CoordinatedMainRel) == SiteCfg.TRUE:
                 attrib[COORDINATED_MAIN_REL] = True
