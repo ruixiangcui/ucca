@@ -1,14 +1,14 @@
 """Input/output utility functions for UCCA scripts."""
+import os
 import sys
 import time
 from collections import defaultdict
-from itertools import filterfalse, chain
-
-import os
 from contextlib import contextmanager
 from glob import glob
-from tqdm import tqdm
+from itertools import filterfalse, chain
 from xml.etree.ElementTree import ParseError
+
+from tqdm import tqdm
 
 from ucca.convert import file2passage, passage2file, from_text, to_text, split2segments
 from ucca.core import Passage
@@ -73,7 +73,9 @@ class LazyLoadedPassages:
                     base, ext = os.path.splitext(os.path.basename(file))
                     converter = self.converters.get(ext.lstrip("."))
                     if converter is None:
-                        raise IOError("Could not read %s file. Try adding '.txt' suffix: '%s'" % (ext, file)) from e
+                        raise IOError("Could not read %s file. See error message above. "
+                                      "If this file's format is not %s, try adding '.txt' suffix to read as plain text:"
+                                      " '%s'" % (ext, ext, file)) from e
                     self._file_handle = open(file, encoding="utf-8")
                     self._split_iter = iter(converter(chain(self._file_handle, [""]), passage_id=base, lang=self.lang))
             if self.split:
