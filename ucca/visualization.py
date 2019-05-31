@@ -99,7 +99,8 @@ def tikz(p, indent=None, node_ids=False):
   level 1/.style={sibling distance=4cm},
   level 2/.style={sibling distance=15mm},
   level 3/.style={sibling distance=15mm},
-  every circle node/.append style={%s=black}]
+  every circle node/.append style={%s=black},
+  every node/.append style={text height=.6ex,text depth=0}]
   \tikzstyle{word} = [font=\rmfamily,color=black]
   """ % ("draw" if node_ids else "fill") + "\\" + tikz(l1.heads[0], indent=1, node_ids=node_ids) + \
             "\n".join([";"] + [r"  \draw[dashed,->] (%s) to node [auto] {%s} (%s);" %
