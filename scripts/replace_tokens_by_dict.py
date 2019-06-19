@@ -10,6 +10,7 @@ def read_dictionary_from_file(filename):
     d = {}
     for line in f:
         fields = line.strip().split()
+        d[fields[0]] = fields[1]
         d[fields[0].strip().encode('ascii', 'xmlcharrefreplace').decode()] = \
             fields[1].strip().encode('ascii', 'xmlcharrefreplace').decode()
     print(d)
