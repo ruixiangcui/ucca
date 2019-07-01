@@ -1,8 +1,8 @@
-from time import sleep
-
 import json
 import logging
 import os
+from time import sleep
+
 import requests
 
 """
@@ -117,11 +117,12 @@ class ServerAccessor:
         logging.debug("Got %s: %s" % (prefix, json.dumps(out)))
         return out
 
-    def submit_task(self, **kwargs):
+    def submit_task(self, submit=True, **kwargs):
         logging.debug("Submitting %s task: %s" % (self.type(kwargs), json.dumps(kwargs)))
-        self.request("put", "user_tasks/%s/draft" % kwargs["id"], json=kwargs)
-        out = self.request("put", "user_tasks/%s/submit" % kwargs["id"], json=kwargs).json()
-        logging.debug("Submitted %s task: %s" % (self.type(kwargs), json.dumps(out)))
+        out = self.request("put", "user_tasks/%s/draft" % kwargs["id"], json=kwargs).json()
+        if submit:
+            out = self.request("put", "user_tasks/%s/submit" % kwargs["id"], json=kwargs).json()
+            logging.debug("Submitted %s task: %s" % (self.type(kwargs), json.dumps(out)))
         return out
 
     def get_source(self, source_id):

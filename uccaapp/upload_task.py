@@ -68,12 +68,9 @@ class TaskUploader(ServerAccessor):
         tok_user_task_out = self.submit_task(**tok_user_task_in)
         task_in.update(parent=tok_task_out, type="ANNOTATION")
         ann_user_task_in = self.create_task(**task_in)
-        if submit:
-            ann_user_task_in.update(
-                to_json(passage, return_dict=True, tok_task=tok_user_task_out, all_categories=self.layer["categories"]))
-            ann_user_task_out = self.submit_task(**ann_user_task_in)
-        else:
-            ann_user_task_out = ann_user_task_in
+        ann_user_task_in.update(
+            to_json(passage, return_dict=True, tok_task=tok_user_task_out, all_categories=self.layer["categories"]))
+        ann_user_task_out = self.submit_task(**ann_user_task_in, submit=submit)
         if log:
             print(passage.ID, passage_out["id"], tok_task_out["id"], ann_user_task_out["id"],
                   file=log, sep="\t", flush=True)
