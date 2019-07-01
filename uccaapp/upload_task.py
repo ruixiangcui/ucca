@@ -35,9 +35,16 @@ class TaskUploader(ServerAccessor):
         self.set_project(project_id)
         self.set_user(user_id)
         
-    def upload_tasks(self, filenames, log=None, submit=True, **kwargs):
+    def upload_tasks(self, filenames, log=None, submit=True, existing_ids=None, **kwargs):
         del kwargs
         log_h = open(log, "w", encoding="utf-8") if log else None
+        if existing_ids:
+            with open(existing_ids, "r", encoding="utf-8") as ids_h:
+                ids = {old_passage_id: (passage_id, tok_id, ann_id)
+                       for (old_passage_id, passage_id, tok_id, ann_id)
+                       in map(str.split, ids_h)}
+        else:
+            ids = None
         try:
             for pattern in filenames:
                 filenames = sorted(glob(pattern))
@@ -45,7 +52,7 @@ class TaskUploader(ServerAccessor):
                     raise IOError("Not found: " + pattern)
                 for passage in get_passages_with_progress_bar(filenames, desc="Uploading"):
                     logging.debug("Uploading passage %s" % passage.ID)
-                    task = self.upload_task(passage, log=log_h, submit=submit)
+                    task = self.upload_task(passage, log=log_h, submit=submit, ids=ids)
                     logging.debug("Submitted task %d" % task["id"])
                     yield task
         except HTTPError as e:
@@ -57,17 +64,24 @@ class TaskUploader(ServerAccessor):
                 if log:
                     log_h.close()
 
-    def upload_task(self, passage, log=None, submit=True):
-        passage_out = self.create_passage(text=to_text(passage, sentences=False)[0], type="PUBLIC", source=self.source)
-        task_in = dict(type="TOKENIZATION", status="SUBMITTED", project=self.project, user=self.user,
-                       passage=passage_out, manager_comment=passage.ID, user_comment=passage.ID, parent=None,
-                       is_demo=False, is_active=True)
-        tok_task_out = self.create_task(**task_in)
-        tok_user_task_in = dict(tok_task_out)
-        tok_user_task_in.update(to_json(passage, return_dict=True, tok_task=True))
-        tok_user_task_out = self.submit_task(**tok_user_task_in)
-        task_in.update(parent=tok_task_out, type="ANNOTATION")
-        ann_user_task_in = self.create_task(**task_in)
+    def upload_task(self, passage, log=None, submit=True, ids=None):
+        if ids:
+            passage_id, tok_id, ann_id = ids[passage.ID]
+            passage_out = self.get_passage(passage_id)
+            tok_user_task_out = tok_task_out = self.get_user_task(tok_id)
+            ann_user_task_in = self.get_user_task(ann_id)
+        else:
+            passage_out = self.create_passage(text=to_text(passage, sentences=False)[0], type="PUBLIC",
+                                              source=self.source)
+            task_in = dict(type="TOKENIZATION", status="SUBMITTED", project=self.project, user=self.user,
+                           passage=passage_out, manager_comment=passage.ID, user_comment=passage.ID, parent=None,
+                           is_demo=False, is_active=True)
+            tok_task_out = self.create_task(**task_in)
+            tok_user_task_in = dict(tok_task_out)
+            tok_user_task_in.update(to_json(passage, return_dict=True, tok_task=True))
+            tok_user_task_out = self.submit_task(**tok_user_task_in)
+            task_in.update(parent=tok_task_out, type="ANNOTATION")
+            ann_user_task_in = self.create_task(**task_in)
         ann_user_task_in.update(
             to_json(passage, return_dict=True, tok_task=tok_user_task_out, all_categories=self.layer["categories"]))
         ann_user_task_out = self.submit_task(**ann_user_task_in, submit=submit)
@@ -81,6 +95,7 @@ class TaskUploader(ServerAccessor):
         argparser.add_argument("filenames", nargs="+", help="passage file names to convert and upload")
         argparser.add_argument("-l", "--log", help="filename to write log of uploaded passages to")
         argparser.add_argument("--no-submit", action="store_false", dest="submit", help="do not submit annotation task")
+        argparser.add_argument("--existing-ids", help="use existing task IDs from file (output of --log); no creation")
         ServerAccessor.add_project_id_argument(argparser)
         ServerAccessor.add_source_id_argument(argparser)
         ServerAccessor.add_user_id_argument(argparser)
