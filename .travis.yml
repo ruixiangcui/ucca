@@ -13,7 +13,7 @@ jobs:
   include:
   - env: TEST=unit
     install:
-    - python setup.py install
+    - pip install .
     - pip install pytest
     - pip install -r requirements.visualize.txt
     - python -m spacy download en_core_web_md

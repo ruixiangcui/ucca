@@ -21,7 +21,7 @@ install:
   - conda create -q -n test-env python=3.6 cython numpy matplotlib networkx pypandoc pytest
   - activate test-env
   - cinst pandoc
-  - python setup.py install
+  - pip install .
   - python -m spacy download en_core_web_md
 
 build: off
