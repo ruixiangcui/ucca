@@ -15,7 +15,7 @@ from tqdm import tqdm
 from ucca import layer0, layer1
 
 MODEL_ENV_VAR = "SPACY_MODEL"  # Determines the default spaCy model to load
-DEFAULT_MODEL = {"en": "en_core_web_md", "fr": "fr_core_news_md", "de": "de_core_news_md"}
+DEFAULT_MODEL = {"en": "en_core_web_md", "fr": "fr_core_news_md", "de": "de_core_news_md", "ru": "ru"}
 
 N_THREADS = 4
 BATCH_SIZE = 50
@@ -63,10 +63,9 @@ class Attr(Enum):
 
 
 def get_nlp(lang="en"):
-    """Load spaCy model for a given language, determined by `models' dict or by MODEL_ENV_VAR"""
+    """ Load spaCy model for a given language, determined by `models' dict or by MODEL_ENV_VAR """
     instance = nlp.get(lang)
     if instance is None:
-        import spacy
         model = models.get(lang)
         if not model:
             models[lang] = model = os.environ.get("_".join((MODEL_ENV_VAR, lang.upper()))) or \
@@ -74,23 +73,37 @@ def get_nlp(lang="en"):
         started = time.time()
         with external_write_mode():
             print("Loading spaCy model '%s'... " % model, end="", flush=True)
-            try:
-                nlp[lang] = instance = spacy.load(model)
-            except OSError:
-                spacy.cli.download(model)
-                # Workaround from https://github.com/explosion/spaCy/issues/3435#issuecomment-474580269
-                from spacy.cli import link
-                from spacy.util import get_package_path
-                link(model, model, force=True, model_path=get_package_path(model))
-                try:
-                    nlp[lang] = instance = spacy.load(model)
-                except OSError as e:
-                    raise OSError("Failed to get spaCy model. Download it manually using "
-                                  "`python -m spacy download %s`." % model) from e
-            tokenizer[lang] = instance.tokenizer
-            instance.tokenizer = lambda words: spacy.tokens.Doc(instance.vocab, words=words)
+        nlp[lang] = instance = load_spacy_model(model)
+        with external_write_mode():
             print("Done (%.3fs)." % (time.time() - started))
+        tokenizer[lang] = instance.tokenizer
+        import spacy
+        instance.tokenizer = lambda words: spacy.tokens.Doc(instance.vocab, words=words)
     return instance
+
+
+def load_spacy_model(model):
+    if model == "ru":
+        try:
+            from spacy.lang.ru import Russian
+            return Russian()
+        except OSError as e:
+            raise OSError("Failed to get spaCy Russian model. Install it using "
+                          "pip install git+https://github.com/aatimofeev/spacy_russian_tokenizer.git") from e
+    import spacy
+    try:
+        return spacy.load(model)
+    except OSError:
+        spacy.cli.download(model)
+        # Workaround from https://github.com/explosion/spaCy/issues/3435#issuecomment-474580269
+        from spacy.cli import link
+        from spacy.util import get_package_path
+        link(model, model, force=True, model_path=get_package_path(model))
+        try:
+            return spacy.load(model)
+        except OSError as e:
+            raise OSError("Failed to get spaCy model. Download it manually using "
+                          "`python -m spacy download %s`." % model) from e
 
 
 models = {}  # maps language two-letter code to name of spaCy model
