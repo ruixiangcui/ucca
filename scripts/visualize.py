@@ -31,7 +31,7 @@ def main(args):
         else:
             import matplotlib.pyplot as plt
             width = len(passage.layer(layer0.LAYER_ID).all) * 19 / 27
-            plt.figure(figsize=(width, width * 10 / 19))
+            plt.figure(passage.ID, figsize=(width, width * 10 / 19))
             visualization.draw(passage, node_ids=args.node_ids)
             if args.out_dir:
                 plt.savefig(os.path.join(args.out_dir, passage.ID + "." + args.format))
