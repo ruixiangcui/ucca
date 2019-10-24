@@ -16,12 +16,13 @@ def draw(passage, node_ids=False):
     warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
     warnings.filterwarnings("ignore", category=UserWarning)
     g = nx.DiGraph()
-    terminals = sorted(passage.layer(layer0.LAYER_ID).all, key=attrgetter("position"))
-    g.add_nodes_from([(n.ID, {"label": n.text, "color": "white"}) for n in terminals])
-    g.add_nodes_from([(n.ID, {"label": node_label(n) or ("", "IMPLICIT", n.ID)[n.attrib.get("implicit", 2 * node_ids)],
-                              "color": ("black", "gray", "white")[n.tag == layer1.NodeTags.Linkage or
-                                                                  2 * n.attrib.get("implicit", node_ids)]})
-                      for n in passage.layer(layer1.LAYER_ID).all])
+    g.add_nodes_from([(n.ID, {"label": n.text, "color": "white"}) for n in passage.layer(layer0.LAYER_ID).all])
+    g.add_nodes_from([(n.ID, {"label": "IMPLICIT", "color": "white"}) for n in passage.layer(layer1.LAYER_ID).all
+                      if n.attrib.get("implicit")])
+    g.add_nodes_from([(n.ID, {"label": node_label(n) or (n.ID if node_ids else ""),
+                              "color": "gray" if n.tag == layer1.NodeTags.Linkage else
+                              ("white" if node_label(n) or (n.ID and node_ids) else "black")})
+                      for n in passage.layer(layer1.LAYER_ID).all if not n.attrib.get("implicit")])
     g.add_edges_from([(n.ID, e.child.ID, {"label": "|".join(e.tags),
                                           "style": "dashed" if e.attrib.get("remote") else "solid"})
                       for layer in passage.layers for n in layer.all for e in n])
@@ -37,25 +38,37 @@ def draw(passage, node_ids=False):
 def topological_layout(passage):
     visited = defaultdict(set)
     pos = {}
-    implicit_offset = 1 + max((n.position for n in passage.layer(layer0.LAYER_ID).all), default=-1)
-    remaining = [n for layer in passage.layers for n in layer.all if not n.parents]
-    while remaining:
+    implicit_offset = [0 for _ in passage.layer(layer0.LAYER_ID).all]
+    leaves = sorted([n for layer in passage.layers for n in layer.all if not n.children],
+                    key=lambda n: getattr(n, "position", None) or n.fparent.end_position)
+    for node in leaves:  # draw leaves first to establish ordering
+        if node.layer.ID == layer0.LAYER_ID:  # terminal
+            x = node.position
+            pos[node.ID] = (x + sum(implicit_offset[:x + 1]), 0)
+        else:  # implicit
+            implicit_offset[node.fparent.end_position] += 1
+    remaining = [n for n in passage.layer(layer1.LAYER_ID).all if not n.parents]
+    implicits = []
+    while remaining:  # draw non-terminals
         node = remaining.pop()
         if node.ID in pos:  # done already
             continue
+        children = [c for c in node.children if c.ID not in pos and c not in visited[node.ID]]
+        if children:
+            visited[node.ID].update(children)  # to avoid cycles
+            remaining += [node] + children
+            continue
         if node.children:
-            children = [c for c in node.children if c.ID not in pos and c not in visited[node.ID]]
-            if children:
-                visited[node.ID].update(children)  # to avoid cycles
-                remaining += [node] + children
-                continue
-            xs, ys = zip(*(pos[c.ID] for c in node.children))
-            pos[node.ID] = (sum(xs) / len(xs), 1 + max(ys) ** 1.01)  # done with children
-        elif node.layer.ID == layer0.LAYER_ID:  # terminal
-            pos[node.ID] = (int(node.position), 0)
-        else:  # implicit
-            pos[node.ID] = (implicit_offset, 0)
-            implicit_offset += 1
+            xs, ys = zip(*(pos[c.ID] for c in node.children if not c.attrib.get("implicit")))
+            pos[node.ID] = sum(xs) / len(xs), 1 + max(ys)  # done with children
+        else:
+            implicits.append(node)
+    for node in implicits:
+        x = node.fparent.end_position
+        x += sum(implicit_offset[:x + 1])
+        _, y = pos[node.fparent.ID]
+        pos[node.ID] = (x, y - 1)
+    pos = {i: (x, y ** 1.01)for i, (x, y) in pos.items()}  # stretch up to avoid over cluttering
     return pos
 
 
