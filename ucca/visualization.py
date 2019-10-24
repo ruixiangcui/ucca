@@ -40,12 +40,12 @@ def topological_layout(passage):
     pos = {}
     implicit_offset = [0 for _ in passage.layer(layer0.LAYER_ID).all]
     leaves = sorted([n for layer in passage.layers for n in layer.all if not n.children],
-                    key=lambda n: getattr(n, "position", None) or n.fparent.end_position)
+                    key=lambda n: getattr(n, "position", None) or (n.fparent.end_position if n.fparent else -1))
     for node in leaves:  # draw leaves first to establish ordering
         if node.layer.ID == layer0.LAYER_ID:  # terminal
             x = node.position
             pos[node.ID] = (x + sum(implicit_offset[:x + 1]), 0)
-        else:  # implicit
+        elif node.fparent:  # implicit
             implicit_offset[node.fparent.end_position] += 1
     remaining = [n for n in passage.layer(layer1.LAYER_ID).all if not n.parents]
     implicits = []
@@ -64,9 +64,10 @@ def topological_layout(passage):
         else:
             implicits.append(node)
     for node in implicits:
-        x = node.fparent.end_position
+        fparent = node.fparent or passage.layer(layer1.LAYER_ID).heads[0]
+        x = fparent.end_position
         x += sum(implicit_offset[:x + 1])
-        _, y = pos[node.fparent.ID]
+        _, y = pos[fparent.ID]
         pos[node.ID] = (x, y - 1)
     pos = {i: (x, y ** 1.01)for i, (x, y) in pos.items()}  # stretch up to avoid over cluttering
     return pos
