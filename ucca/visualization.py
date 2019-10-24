@@ -38,15 +38,19 @@ def draw(passage, node_ids=False):
 def topological_layout(passage):
     visited = defaultdict(set)
     pos = {}
-    implicit_offset = [0 for _ in passage.layer(layer0.LAYER_ID).all]
-    leaves = sorted([n for layer in passage.layers for n in layer.all if not n.children],
-                    key=lambda n: getattr(n, "position", None) or (n.fparent.end_position if n.fparent else -1))
-    for node in leaves:  # draw leaves first to establish ordering
-        if node.layer.ID == layer0.LAYER_ID:  # terminal
-            x = node.position
-            pos[node.ID] = (x + sum(implicit_offset[:x + 1]), 0)
-        elif node.fparent:  # implicit
-            implicit_offset[node.fparent.end_position] += 1
+    terminals = passage.layer(layer0.LAYER_ID).all
+    if terminals:
+        implicit_offset = list(range(0, 1 + max(n.position for n in terminals)))
+        leaves = sorted([n for layer in passage.layers for n in layer.all if not n.children],
+                        key=lambda n: getattr(n, "position", None) or (n.fparent.end_position if n.fparent else -1))
+        for node in leaves:  # draw leaves first to establish ordering
+            if node.layer.ID == layer0.LAYER_ID:  # terminal
+                x = node.position
+                pos[node.ID] = (x + sum(implicit_offset[:x + 1]), 0)
+            elif node.fparent:  # implicit
+                implicit_offset[node.fparent.end_position] += 1
+    else:
+        implicit_offset = [0]
     remaining = [n for n in passage.layer(layer1.LAYER_ID).all if not n.parents]
     implicits = []
     while remaining:  # draw non-terminals
@@ -67,7 +71,7 @@ def topological_layout(passage):
         fparent = node.fparent or passage.layer(layer1.LAYER_ID).heads[0]
         x = fparent.end_position
         x += sum(implicit_offset[:x + 1])
-        _, y = pos[fparent.ID]
+        _, y = pos.get(fparent.ID, (0, 0))
         pos[node.ID] = (x, y - 1)
     pos = {i: (x, y ** 1.01)for i, (x, y) in pos.items()}  # stretch up to avoid over cluttering
     return pos
