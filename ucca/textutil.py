@@ -352,11 +352,12 @@ def break2paragraphs(passage, return_terminals=False, *args, **kwargs):
     :return: a list of positions in the Passage, each denotes a closing Terminal of a paragraph.
     """
     del args, kwargs
-    terminals = list(extract_terminals(passage))
+    terminals = sorted(extract_terminals(passage), key=attrgetter("position"))
     if not terminals:
         return []
     return [list(p) for _, p in groupby(terminals, key=attrgetter("paragraph"))] if return_terminals else \
-        [t.position - 1 for t in terminals if t.position > 1 and t.para_pos == 1] + [terminals[-1].position]
+        [t1.position for t1, t2 in zip(terminals[:-1], terminals[1:])
+         if t2.para_pos == 1 or t1.paragraph != t2.paragraph] + [terminals[-1].position]
 
 
 def indent_xml(xml_as_string):
