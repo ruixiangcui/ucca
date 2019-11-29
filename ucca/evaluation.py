@@ -1,12 +1,13 @@
 """
 The evaluation library for UCCA layer 1.
-v1.3
+v1.4
 2016-12-25: move common Fs to root before evaluation
 2017-01-04: flatten centers, do not add 1 (for root) to mutual
 2017-01-16: fix bug in moving common Fs
 2018-04-12: exclude punctuation nodes regardless of edge tag
 2018-12-11: fix another bug in moving common Fs
 2019-01-22: support multiple categories per edge
+2019-11-29: evaluate implicit nodes too (by their parent's yield)
 """
 from collections import Counter, OrderedDict
 from itertools import groupby
