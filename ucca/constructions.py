@@ -70,7 +70,7 @@ class Candidate:
         self.verbose = verbose
         self.terminals = self.edge.child.get_terminals()
         self._terminal_yield = positions(self.terminals)
-        self._terminal_yield_no_punct = positions(self.edge.child.get_terminals(punct=False))
+        self._terminal_yield_no_punct = positions((self.edge.parent if self.is_implicit else self.edge.child).get_terminals(punct=False))
         if self.reference is not None:
             self.terminals = [self.reference.by_id(t.ID) for t in self.terminals]
         self.extra = {}
@@ -135,6 +135,9 @@ class Candidate:
     def is_remote(self):
         return self.remote and not self.implicit and not self.is_punct()
 
+    def is_implicit(self):
+        return self.implicit and not self.remote
+
     def is_predicate(self):
         return bool({EdgeTags.Process, EdgeTags.State}.intersection(self.edge.tags)) and \
                self.out_tags <= {EdgeTags.Center, EdgeTags.Function, EdgeTags.Terminal} and \
@@ -179,7 +182,8 @@ CONSTRUCTIONS = (
                  lambda c: "ADJ" in c.pos and "NOUN" not in c.pos and c.is_predicate()),
     Construction("expletives", "Expletives",
                  lambda c: c.tokens <= {"it", "there"} and EdgeTags.Function in c.edge.tags),
-    Categories(),
+    Construction("implicit", "Implicit edges", Candidate.is_implicit, default=True),
+    Categories()
 )
 PRIMARY = CONSTRUCTIONS[0]
 CONSTRUCTION_BY_NAME = OrderedDict([(c.name, c) for c in CONSTRUCTIONS])
