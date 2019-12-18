@@ -118,8 +118,9 @@ def filter_nodes(categories=(), tokens=(), tokens_mode=CONSECUTIVE, case_insensi
             if remotes:
                 if node.attrib.get("implicit"):
                     yield 'IMPLICIT', node, task_id, user_id
-                if any([e.attrib.get("remote") for e in node.incoming]):
-                    yield 'REMOTE', node, task_id, user_id
+                for e in node.incoming:
+                    if e.attrib.get("remote"):
+                        yield 'REMOTE', e.parent, task_id, user_id
             if tokens and not node.attrib.get("implicit"):
                 unit_tokens = [t.text for t in node.get_terminals(punct=True)]
                 if case_insensitive:
