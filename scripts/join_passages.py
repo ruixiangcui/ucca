@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
+import argparse
+import os
 import sys
 from collections import defaultdict
-
-import argparse
 
 import ucca.convert
 from ucca.ioutil import passage2file, get_passages
@@ -13,6 +13,7 @@ desc = """Parses XML/pickle files in UCCA standard format, and writes a single p
 
 
 def main(args):
+    os.makedirs(args.outdir, exist_ok=True)
     passages = list(get_passages(args.filenames))
     if args.join_by_prefix:
         subsets = defaultdict(list)

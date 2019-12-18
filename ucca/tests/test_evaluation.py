@@ -12,6 +12,7 @@ from .conftest import PASSAGES, load_xml
 
 PRIMARY = "primary"
 REMOTE = "remote"
+IMPLICIT='implicit'
 
 """Tests the evaluation module functions and classes."""
 
@@ -298,20 +299,30 @@ def test_evaluate_self(create, units, errors, normalize):
 
 
 @pytest.mark.parametrize("create1, create2, f1", (
-                                 (passage1, passage2, {(LABELED, PRIMARY): 0.5, (LABELED, REMOTE): 0.4,
-                                                       (UNLABELED, PRIMARY): 0.75, (UNLABELED, REMOTE): 0.8,
-                                                       (WEAK_LABELED, PRIMARY): 7/12, (WEAK_LABELED, REMOTE): 0.8}),
-                                 (simple1, simple2, {(LABELED, PRIMARY): 0.6, (LABELED, REMOTE): 0,
-                                                     (UNLABELED, PRIMARY): 1, (UNLABELED, REMOTE): 1,
-                                                     (WEAK_LABELED, PRIMARY): 0.8, (WEAK_LABELED, REMOTE): 0}),
-                                 (function1, function2, {(LABELED, PRIMARY): 0.6, (LABELED, REMOTE): 0,
-                                                         (UNLABELED, PRIMARY): 1, (UNLABELED, REMOTE): 1,
-                                                         (WEAK_LABELED, PRIMARY): 0.8, (WEAK_LABELED, REMOTE): 0}),
+                                 (passage1, passage2, {(LABELED, PRIMARY): 0.4, (LABELED, REMOTE): 0.0, (LABELED, IMPLICIT):1,
+                                                       (UNLABELED, PRIMARY): 0.4, (UNLABELED, REMOTE): 0.0, (UNLABELED, IMPLICIT): 1,
+                                                       (WEAK_LABELED, PRIMARY): 0.4, (WEAK_LABELED, REMOTE): 0.0, (WEAK_LABELED, IMPLICIT): 1}),
+                                 (simple1, simple2, {(LABELED, PRIMARY): 2/3, (LABELED, REMOTE): 0, (LABELED, IMPLICIT):0,
+                                                     (UNLABELED, PRIMARY): 1, (UNLABELED, REMOTE): 1, (UNLABELED, IMPLICIT): 0,
+                                                     (WEAK_LABELED, PRIMARY): 1, (WEAK_LABELED, REMOTE): 0, (WEAK_LABELED, IMPLICIT): 0}),
+                                 (function1, function2, {(LABELED, PRIMARY): 2/3, (LABELED, REMOTE): 0, (LABELED, IMPLICIT):0,
+                                                         (UNLABELED, PRIMARY): 1, (UNLABELED, REMOTE): 1, (UNLABELED, IMPLICIT): 0,
+                                                         (WEAK_LABELED, PRIMARY): 1, (WEAK_LABELED, REMOTE): 0, (WEAK_LABELED, IMPLICIT): 0}),
                                  tuple(partial(convert.from_standard, load_xml(
                                      os.path.join("test_files", "%s.xml" % f))) for f in ("120_parsed", "standard3")) +
-                                 ({(LABELED, PRIMARY): 3/14, (LABELED, REMOTE): 0,
-                                   (UNLABELED, PRIMARY): 0.5, (UNLABELED, REMOTE): 0,
-                                   (WEAK_LABELED, PRIMARY): 3/14, (WEAK_LABELED, REMOTE): 0},)
+                                 ({(LABELED, PRIMARY): 0.2, (LABELED, REMOTE): 0, (LABELED, IMPLICIT):0,
+                                   (UNLABELED, PRIMARY): 0.2, (UNLABELED, REMOTE): 0, (UNLABELED, IMPLICIT): 0,
+                                   (WEAK_LABELED, PRIMARY): 0.2, (WEAK_LABELED, REMOTE): 0, (WEAK_LABELED, IMPLICIT): 0},),
+                                 tuple(partial(convert.from_standard, load_xml(
+                                     os.path.join("test_files", "%s.xml" % f))) for f in ("implicit1", "implicit1_ref")) +
+                                 ({(LABELED, PRIMARY): 1, (LABELED, REMOTE): 1, (LABELED, IMPLICIT):2/3,
+                                   (UNLABELED, PRIMARY): 1, (UNLABELED, REMOTE): 1, (UNLABELED, IMPLICIT): 2/3,
+                                   (WEAK_LABELED, PRIMARY): 1, (WEAK_LABELED, REMOTE): 1, (WEAK_LABELED, IMPLICIT): 2/3},),
+                                 tuple(partial(convert.from_standard, load_xml(
+                                     os.path.join("test_files", "%s.xml" % f))) for f in ("implicit2", "implicit2_ref")) +
+                                 ({(LABELED, PRIMARY): 0.75, (LABELED, REMOTE): 0, (LABELED, IMPLICIT):0,
+                                   (UNLABELED, PRIMARY): 0.75, (UNLABELED, REMOTE): 0, (UNLABELED, IMPLICIT): 0,
+                                   (WEAK_LABELED, PRIMARY): 0.75, (WEAK_LABELED, REMOTE): 0, (WEAK_LABELED, IMPLICIT): 0},),
                          ))
 @pytest.mark.parametrize("units", (True, False), ids=("units", ""))
 @pytest.mark.parametrize("errors", (True, False), ids=("errors", ""))

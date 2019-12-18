@@ -734,7 +734,8 @@ def from_standard(root, extra_funcs=None):
     return passage
 
 
-def from_text(text, passage_id="1", tokenized=False, one_per_line=False, extra_format=None, lang="en", *args, **kwargs):
+def from_text(text, passage_id="1", tokenized=False, one_per_line=False, extra_format=None, lang="en",
+              return_text=False, *args, **kwargs):
     """Converts from tokenized strings to a Passage object.
 
     :param text: a multi-line string or a sequence of strings:
@@ -744,6 +745,7 @@ def from_text(text, passage_id="1", tokenized=False, one_per_line=False, extra_f
     :param one_per_line: each line will be a new passage rather than just a new paragraph
     :param extra_format: value to set in passage.extra["format"]
     :param lang: language to use for tokenization model
+    :param return_text: whether to return the original text with each passage and not just the passage itself
 
     :return: generator of Passage object with only Terminal units
     """
@@ -754,6 +756,7 @@ def from_text(text, passage_id="1", tokenized=False, one_per_line=False, extra_f
         text = (text,)  # text is a list of tokens, not list of lines
     p = l0 = paragraph = None
     i = 0
+    passage_lines = []
     for line in text:
         if not tokenized:
             line = line.strip()
@@ -768,12 +771,14 @@ def from_text(text, passage_id="1", tokenized=False, one_per_line=False, extra_f
             for lex in textutil.get_tokenizer(tokenized, lang=lang)(line):
                 l0.add_terminal(text=lex.orth_, punct=lex.is_punct, paragraph=paragraph)
             paragraph += 1
+            passage_lines.append(line)
         if p and (not line or one_per_line):
-            yield p
+            yield (p, "\n".join(passage_lines)) if return_text else p
             p = None
             i += 1
+            passage_lines = []
     if p:
-        yield p
+        yield (p, "\n".join(passage_lines)) if return_text else p
 
 
 def to_text(passage, sentences=True, lang="en", *args, **kwargs):

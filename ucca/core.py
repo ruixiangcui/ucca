@@ -418,7 +418,10 @@ class Node:
 
         # After properly initializing self, add it to the Passage/Layer
         root._add_node(self)
-        root.layer(self.layer.ID)._add_node(self)
+        try:
+            root.layer(self.layer.ID)._add_node(self)
+        except KeyError as e:
+            raise ValueError("Invalid layer '%s' in node ID '%s'" % (self.layer.ID, self._ID)) from e
 
     @property
     def tag(self):
