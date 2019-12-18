@@ -115,8 +115,11 @@ def filter_nodes(categories=(), tokens=(), tokens_mode=CONSECUTIVE, case_insensi
                 else passage.layer(layer1.LAYER_ID).all:
             if comment and node.extra.get("remarks"):
                 yield "comment", node, task_id, user_id
-            if remotes and node.attrib.get("implicit"):
-                yield 'IMPLICIT', node, task_id, user_id
+            if remotes:
+                if node.attrib.get("implicit"):
+                    yield 'IMPLICIT', node, task_id, user_id
+                if any([e.attrib.get("remote") for e in node.incoming]):
+                    yield 'REMOTE', node, task_id, user_id
             if tokens and not node.attrib.get("implicit"):
                 unit_tokens = [t.text for t in node.get_terminals(punct=True)]
                 if case_insensitive:
