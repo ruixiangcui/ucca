@@ -109,12 +109,14 @@ def tokens_match(unit_tokens, query_tokens, mode):
 ##                 intersection = set(categories).intersection(all_tags)
 
 def filter_nodes(categories=(), tokens=(), tokens_mode=CONSECUTIVE, case_insensitive=False, comment=False,
-                 sentence_level=False, **kwargs):
+                 sentence_level=False, remotes=False, **kwargs):
     for passage, task_id, user_id in TaskDownloader(**kwargs).download_tasks(**kwargs):
         for node in [p.layer(layer1.LAYER_ID).heads[0] for p in convert.split2sentences(passage)] if sentence_level \
                 else passage.layer(layer1.LAYER_ID).all:
             if comment and node.extra.get("remarks"):
                 yield "comment", node, task_id, user_id
+            if remotes and node.attrib.get("implicit"):
+                yield 'IMPLICIT', node, task_id, user_id
             if tokens and not node.attrib.get("implicit"):
                 unit_tokens = [t.text for t in node.get_terminals(punct=True)]
                 if case_insensitive:
