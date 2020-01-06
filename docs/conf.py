@@ -364,5 +364,5 @@ class Mock(MagicMock):
     def __getattr__(cls, name):
         return MagicMock()
 
-MOCK_MODULES = ['numpy', 'spacy', 'psycopg2', 'unidecode']
+MOCK_MODULES = ['numpy', 'spacy', 'psycopg2', 'unidecode', 'pandas']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
