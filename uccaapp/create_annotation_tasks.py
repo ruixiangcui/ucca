@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+import argparse
 import sys
 
-import argparse
 from tqdm import tqdm
 
 from uccaapp.api import ServerAccessor
@@ -10,8 +10,13 @@ desc = """Convert a passage file to JSON format and upload to UCCA-App as a comp
 
 
 class AnnotationTaskCreator(ServerAccessor):
-    def __init__(self, **kwargs):
+    def __init__(self, project_id=None, **kwargs):
+        """
+        :param project_id: Specify project for created tasks, otherwise same as parent tasks
+        """
         super().__init__(**kwargs)
+        if project_id is not None:
+            self.set_project(project_id)
 
     def create_tasks(self, filename, log=None, **kwargs):
         log_h = open(log, "w", encoding="utf-8") if log else None
@@ -24,14 +29,15 @@ class AnnotationTaskCreator(ServerAccessor):
         if log:
             log_h.close()
 
-    def build_task(self, user_id, task_id, review=False, manager_comment=None, **kwargs):
+    def build_task(self, user_id, task_id, review=False, manager_comment=None, strict=False, **kwargs):
         del kwargs
         user = self.get_user(user_id)
         task = self.get_task(task_id)
         assert task["type"] in (["ANNOTATION", "REVIEW"] if review else ["TOKENIZATION"]), \
             "Wrong input task given: %s for task ID %s" % (task["type"], task_id)
-        assert task["status"] == "SUBMITTED", "Parent task is not submitted: %s" % task_id
-        return dict(type="REVIEW" if review else "ANNOTATION", project=task["project"], user=user,
+        if strict:
+            assert task["status"] == "SUBMITTED", "Parent task is not submitted: %s" % task_id
+        return dict(type="REVIEW" if review else "ANNOTATION", project=self.project or task["project"], user=user,
                     passage=task["passage"], manager_comment=manager_comment or task.get("manager_comment", ""),
                     user_comment=task.get("user_comment", ""), parent=task, is_demo=False, is_active=True)
 
@@ -56,6 +62,8 @@ class AnnotationTaskCreator(ServerAccessor):
         argparser.add_argument("-r", "--review", action="store_true", help="Create annotation/review task")
         argparser.add_argument("-l", "--log", help="filename to write log of uploaded passages to")
         argparser.add_argument("--manager-comment", help="Manager comment to set for all tasks")
+        ServerAccessor.add_project_id_argument(argparser)
+        argparser.add_argument("-s", "--strict", action="store_true", help="Require parent task to be submitted")
 
 
 def main(**kwargs):
