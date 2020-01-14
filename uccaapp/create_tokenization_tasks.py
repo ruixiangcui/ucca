@@ -26,6 +26,7 @@ class TokenizationTaskCreator(AnnotationTaskCreator):
         argparser.add_argument("filename", help="a file where each line is a <User ID> <Passage ID>")
         argparser.add_argument("-l", "--log", help="filename to write log of uploaded passages to")
         ServerAccessor.add_project_id_argument(argparser)
+        #ServerAccessor.add_user_id_argument(argparser)
         ServerAccessor.add_arguments(argparser)
 
 
