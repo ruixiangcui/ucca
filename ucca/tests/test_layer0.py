@@ -49,6 +49,8 @@ def test_terminals():
     assert terms[0] == terms[0]
     assert terms[0].equals(equal_term)
     assert not (terms[1].equals(unequal_term))
+    assert p.copy(layer0.LAYER_ID).equals(p)
+    assert p_copy.copy(layer0.LAYER_ID).equals(p_copy)
 
 
 def test_layer0():
@@ -60,3 +62,4 @@ def test_layer0():
     assert [x[0] for x in l0.pairs] == [1, 2, 3]
     assert [t.para_pos for t in l0.all] == [1, 1, 2]
     assert l0.words == (t1, t3)
+    assert p.copy(layer0.LAYER_ID).equals(p)
