@@ -949,7 +949,10 @@ class Passage:
         :raise KeyError: if no Layer with this ID is present
 
         """
-        return self._layers[ID]
+        try:
+            return self._layers[ID]
+        except KeyError as e:
+            raise KeyError("Layer '%s' not found in passage '%s'" % (ID, self.ID)) from e
 
     def equals(self, other, *, ordered=False, ignore_node=None, ignore_edge=None):
         """Returns whether two passages are equivalent.
@@ -1032,7 +1035,13 @@ class Passage:
         :return: The node.Node object whose ID matches
         :raise KeyError: if no Node with this ID is found
         """
-        return self._nodes[ID]
+        try:
+            return self._nodes[ID]
+        except KeyError as e:
+            layer_id, _ = ID.split(Node.ID_SEPARATOR)
+            layer = self.layer(layer_id)
+            raise KeyError("Node '%s' not found in passage '%s', existing IDs in layer '%s': %s" % (
+                ID, self.ID, layer_id, ", ".join(n.ID for n in layer.all))) from e
 
     @ModifyPassage
     def _add_layer(self, layer):
