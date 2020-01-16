@@ -1021,7 +1021,9 @@ class Passage:
         """
         other = Passage(ID=self.ID, attrib=self.attrib.copy())
         other.extra = self.extra.copy()
-        for lid in layers or sorted(self._layers):
+        if layers is None:
+            layers = sorted(self._layers)
+        for lid in layers:
             try:
                 self.layer(lid).copy(other)
             except AttributeError as e:
