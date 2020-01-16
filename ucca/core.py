@@ -1003,7 +1003,7 @@ class Passage:
                                   for n2 in other_nodes)],
                       key=id_orderkey)
 
-    def copy(self, layers):
+    def copy(self, layers=None):
         """Copies the Passage and specified layers to a new object.
 
         The main "building block" of copying is the Layer, so copying is
@@ -1011,6 +1011,7 @@ class Passage:
         and creating the equivalent layers (each layer for itself).
 
         :param layers: sequence of layer IDs to copy to the new object.
+            If None, all layers will be copied.
 
         :return: A new Passage object.
 
@@ -1020,7 +1021,7 @@ class Passage:
         """
         other = Passage(ID=self.ID, attrib=self.attrib.copy())
         other.extra = self.extra.copy()
-        for lid in layers:
+        for lid in layers or sorted(self._layers):
             try:
                 self.layer(lid).copy(other)
             except AttributeError as e:
