@@ -230,6 +230,9 @@ class Category:
     def to_xml(self):
         pass
 
+    def __iter__(self):
+        return iter((self.tag, self.slot, self.layer, self.parent))
+
 
 class Edge:
     """Labeled edge between two :class:`Node` objects in UCCA annotation graph.
