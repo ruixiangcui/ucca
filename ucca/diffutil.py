@@ -3,7 +3,7 @@ import sys
 from ucca.ioutil import passage2file
 
 
-def diff_passages(true_passage, pred_passage):
+def diff_passages(true_passage, pred_passage, write=False):
     """
     Debug method to print missing or mistaken attributes, nodes and edges
     """
@@ -52,7 +52,7 @@ def diff_passages(true_passage, pred_passage):
         lines.append("Mistake nodes: %s" % ", ".join(pred_ids))
     if true_ids:
         lines.append("Missing nodes: %s" % ", ".join(true_ids))
-    if lines:
+    if write and lines:
         outfile = "%s.xml" % true_passage.ID
         sys.stderr.write("Writing passage '%s'...\n" % outfile)
         passage2file(true_passage, outfile)
