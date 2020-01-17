@@ -20,7 +20,7 @@ def diff_passages(true_passage, pred_passage):
     except KeyError:  # no layer with same ID found
         lines.append("Missing layer: %s, %s" %
                      (true_passage._layers, pred_passage._layers))
-    pred_ids = {node.extra["remarks"]: node
+    pred_ids = {node.extra.get("remarks", node.ID): node
                 for node in pred_passage.missing_nodes(true_passage)}
     true_ids = {node.ID: node
                 for node in true_passage.missing_nodes(pred_passage)}
