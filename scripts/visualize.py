@@ -2,6 +2,7 @@ import os
 from argparse import ArgumentParser
 
 from ucca import visualization, layer0
+from ucca.convert import split2sentences
 from ucca.ioutil import get_passages, get_passages_with_progress_bar, external_write_mode
 
 
@@ -23,6 +24,8 @@ def main(args):
     to_stdout = (args.tikz or args.standoff) and not args.out_dir
     t = args.passages
     t = get_passages(t) if to_stdout else get_passages_with_progress_bar(t, desc="Visualizing")
+    if args.sentences:
+        t = (sentence for passage in t for sentence in split2sentences(passage))
     for passage in t:
         if args.tikz:
             print_text(args, visualization.tikz(passage), passage.ID + ".tikz.txt")
@@ -49,4 +52,5 @@ if __name__ == "__main__":
     argparser.add_argument("-o", "--out-dir", help="directory to save figures in (otherwise displayed immediately)")
     argparser.add_argument("-i", "--node-ids", action="store_true", help="print tikz code rather than showing plots")
     argparser.add_argument("-f", "--format", choices=("png", "svg"), default="png", help="image format")
+    argparser.add_argument("--sentences", help="split to sentences to avoid huge plots")
     main(argparser.parse_args())
