@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 
 from ucca import layer0, layer1
 from ucca.ioutil import get_passages_with_progress_bar, write_passage
-from ucca.normalization import fparent
+from ucca.normalization import fparent, copy_edge, traverse_up_centers
 
 desc = """Change articles to Function, complying with UCCA v2 guidelines"""
 
@@ -15,6 +15,10 @@ ARTICLES = {
 
 REFLEXIVES = {
     "en": ("herself", "himself", "itself", "themselves", "yourself", "yourselves", "myself", "ourselves", "oneself"),
+}
+
+NONE = {
+    "de": ("kein", "keine", "keinen", "keines", "keiner", "keinem"),
 }
 
 
@@ -44,7 +48,31 @@ def insert_reflexive_into_relation(terminal, parent, lang):
                                 return True
 
 
-RULES = (change_article_to_function, insert_reflexive_into_relation)
+def change_none_to_quantifier(terminal, parent, lang):
+    if terminal.text.lower() in NONE.get(lang, ()):
+        parent = traverse_up_centers(parent)
+        for edge in parent.incoming:
+            if not edge.attrib.get("remote"):
+                for category in edge.categories:
+                    if category.tag == layer1.EdgeTags.Adverbial:
+                        for participant_edge in edge.parent:
+                            if layer1.EdgeTags.Participant in participant_edge.tags:
+                                new_parent = participant_edge.child
+                                if new_parent.start_position == terminal.position + 1:
+                                    if not new_parent.centers:
+                                        edges = new_parent.outgoing
+                                        center = new_parent.layer.add_fnode(new_parent, layer1.EdgeTags.Center)
+                                        for sub_edge in edges:
+                                            copy_edge(sub_edge, center)
+                                            new_parent.remove(sub_edge)
+                                    category.tag = layer1.EdgeTags.Quantifier
+                                    participant_edge.add(layer1.EdgeTags.Adverbial)
+                                    copy_edge(edge, new_parent)
+                                    edge.parent.remove(edge)
+                                    return True
+
+
+RULES = (change_article_to_function, insert_reflexive_into_relation, change_none_to_quantifier)
 
 
 def convert_passage(passage, lang, report_writer):

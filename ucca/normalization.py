@@ -9,6 +9,18 @@ TOP_CATEGORIES = {ETags.ParallelScene, ETags.Linker, ETags.Function, ETags.Groun
 COORDINATED_MAIN_REL = "Coordinated_Main_Rel."
 
 
+def traverse_up_centers(node):
+    while True:
+        found_center = False
+        for edge in node.incoming:
+            if not edge.attrib.get("remote") and layer1.EdgeTags.Center in edge.tags:
+                node = edge.parent
+                found_center = True
+                continue
+        if not found_center:
+            return node
+
+
 def fparent(node_or_edge):
     try:
         return node_or_edge.fparent
