@@ -34,19 +34,25 @@ class TaskDownloader(ServerAccessor):
             log_h.close()
 
     def download_task(self, task_id, normalize=False, write=True, validate=None, binary=None, log=None, out_dir=None,
-                      prefix=None, by_external_id=False, verbose=False, write_valid_only=False, **kwargs):
+                      prefix=None, by_external_id=False, verbose=False, write_valid_only=False, strict=False, **kwargs):
         del kwargs
         task = self.get_user_task(task_id)
         user_id = task["user"]["id"]
+        passage = None
         try:
             passage = from_json(task, by_external_id=by_external_id)
         except ValueError as e:
-            raise ValueError("Failed reading json for task %s:\n%s" % (task_id, json.dumps(task))) from e
-        if normalize:
+            if strict:
+                raise ValueError("Failed reading json for task %s:\n%s" % (task_id, json.dumps(task))) from e
+            print("", task_id, user_id, "Failed reading json", file=validate or sys.stderr, sep="\t", flush=True)
+        if normalize and passage is not None:
             try:
                 normalization.normalize(passage)
             except AssertionError as e:
-                raise ValueError("Failed normalizing task %s:\n%s" % (task_id, json.dumps(task))) from e
+                if strict:
+                    raise ValueError("Failed normalizing task %s:\n%s" % (task_id, json.dumps(task))) from e
+                print(passage.ID, task_id, user_id, "Failed normalizing task: %s" % e, file=validate or sys.stderr,
+                      sep="\t", flush=True)
         if log:
             print(passage.ID, task_id, user_id, task["user_comment"], task["created_at"], task["updated_at"],
                   file=log, sep="\t", flush=True)
@@ -69,6 +75,7 @@ class TaskDownloader(ServerAccessor):
         TaskDownloader.add_write_arguments(argparser)
         argparser.add_argument("-V", "--validate", help="run validation on downloaded passages and save errors to file")
         argparser.add_argument("-N", "--normalize", action="store_true", help="normalize downloaded passages")
+        argparser.add_argument("--strict", action="store_true", help="fail on reading or normalization error")
         argparser.add_argument("-l", "--log", help="filename to write log of downloaded passages to")
         ServerAccessor.add_arguments(argparser)
 
