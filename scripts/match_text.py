@@ -60,7 +60,7 @@ def main(args):
 
 
 if __name__ == "__main__":
-    argparser = argparse.ArgumentParser(description="Normalize UCCA passages")
+    argparser = argparse.ArgumentParser(description="Match UCCA passages to original text and print aligned lines")
     argparser.add_argument("text", help="file of text to match to")
     argparser.add_argument("filenames", nargs="+", help="files or directories of UCCA passages to match")
     argparser.add_argument("-o", "--out", default="text.tsv", help="output file")
