@@ -1020,7 +1020,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
     """
     del args, kwargs
     # Create tokens
-    terminal_id_to_token_id = {}
+    terminal_id_to_token = {}
     terminals = sorted(passage.layer(layer0.LAYER_ID).all, key=attrgetter("position"))
     if tok_task is True or tok_task is None:  # Necessary because bool(tok_task) == True also if a task dict is given
         tokens = []
@@ -1031,7 +1031,8 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
                          index_in_task=terminal.position - 1,
                          require_annotation=not layer0.is_punct(terminal))
             if tok_task is None:  # When doing tokenization as a task, no need to fill the IDs (done by the server)
-                token["id"] = terminal_id_to_token_id[terminal.ID] = terminal.position
+                token["id"] = terminal.position
+                terminal_id_to_token[terminal.ID] = token
             tokens.append(token)
             start_index = end_index + 1
     else:
@@ -1040,7 +1041,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
             raise ValueError("Number of tokens in tokenization task != number of terminals in passage: %d != %d" %
                              (len(tokens), len(terminals)))
         for token, terminal in zip(tokens, terminals):
-            terminal_id_to_token_id[terminal.ID] = token["id"]
+            terminal_id_to_token[terminal.ID] = token
     # Create annotation units
     category_name_to_id = {c["name"]: c["id"] for c in all_categories} if all_categories else None
     annotation_units = []
@@ -1053,7 +1054,7 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
                         type="IMPLICIT" if implicit else "REGULAR", is_remote_copy=is_remote_copy,
                         categories=cs, comment=n.extra.get("remarks", ""), cluster="", cloned_from_tree_id=None,
                         parent_tree_id=parent_tree_id, gui_status="OPEN",
-                        children_tokens=[dict(id=terminal_id_to_token_id[t.ID]) for t in ts])
+                        children_tokens=[terminal_id_to_token[t.ID] for t in ts])
 
         root_node = passage.layer(layer1.LAYER_ID).heads[0]  # Ignoring Linkage: taking only the first head
         root_unit = _create_unit([0], root_node, terminals, [])
