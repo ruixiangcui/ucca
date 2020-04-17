@@ -73,7 +73,7 @@ class TaskUploader(ServerAccessor):
         else:
             passage_out = self.create_passage(text=to_text(passage, sentences=False)[0], type="PUBLIC",
                                               source=self.source)
-            task_in = dict(type="TOKENIZATION", status="SUBMITTED", project=self.project, user=self.user,
+            task_in = dict(type="TOKENIZATION", status="ONGOING", project=self.project, user=self.user,
                            passage=passage_out, manager_comment=passage.ID, user_comment=passage.ID, parent=None,
                            is_demo=False, is_active=True)
             tok_task_out = self.create_task(**task_in)
