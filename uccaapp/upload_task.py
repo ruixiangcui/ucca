@@ -2,7 +2,6 @@
 import argparse
 import logging
 import sys
-from glob import glob
 
 from requests.exceptions import HTTPError
 
@@ -46,15 +45,11 @@ class TaskUploader(ServerAccessor):
         else:
             ids = None
         try:
-            for pattern in filenames:
-                filenames = sorted(glob(pattern))
-                if not filenames:
-                    raise IOError("Not found: " + pattern)
-                for passage in get_passages_with_progress_bar(filenames, desc="Uploading"):
-                    logging.debug("Uploading passage %s" % passage.ID)
-                    task = self.upload_task(passage, log=log_h, submit=submit, ids=ids)
-                    logging.debug("Submitted task %d" % task["id"])
-                    yield task
+            for passage in get_passages_with_progress_bar(filenames, desc="Uploading"):
+                logging.debug("Uploading passage %s" % passage.ID)
+                task = self.upload_task(passage, log=log_h, submit=submit, ids=ids)
+                logging.debug("Submitted task %d" % task["id"])
+                yield task
         except HTTPError as e:
             try:
                 raise ValueError(e.response.json()["detail"]) from e
