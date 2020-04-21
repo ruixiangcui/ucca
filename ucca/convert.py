@@ -885,7 +885,7 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
     """Convert text (or dict) in UCCA-App JSON format to a Passage object.
         According to the API, annotation units are organized in a tree, where the full unit is included as a child of
           its parent: https://github.com/omriabnd/UCCA-App/blob/master/UCCAApp_REST_API_Reference.pdf
-          Just token children are included in the simple form ("id" only), in the "children_tokens" field.
+          Token children are included in full in the "children_tokens" field.
           Note: children_tokens contains all tokens that are descendants of the unit, not just immediate children.
         tree_id: encodes the path leading to the node, e.g., 3-5-2.
           1-based, and in reverse order to the children's appearance, so that 1 is last, 2 is before last, etc.
