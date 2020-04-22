@@ -119,12 +119,13 @@ class ServerAccessor:
 
     def submit_task(self, submit=True, **kwargs):
         logging.debug("Submitting %s task: %s" % (self.type(kwargs), json.dumps(kwargs)))
+        out = None
+        if self.type(kwargs) == "annotation" or not submit:  # Annotation tasks require drafting before submission
+            out = self.request("put", "user_tasks/%s/draft" % kwargs["id"], json=kwargs).json()
+            logging.debug("Drafted %s task: %s" % (self.type(kwargs), json.dumps(out)))
         if submit:
             out = self.request("put", "user_tasks/%s/submit" % kwargs["id"], json=kwargs).json()
             logging.debug("Submitted %s task: %s" % (self.type(kwargs), json.dumps(out)))
-        else:
-            out = self.request("put", "user_tasks/%s/draft" % kwargs["id"], json=kwargs).json()
-            logging.debug("Drafted %s task: %s" % (self.type(kwargs), json.dumps(out)))
         return out
 
     def get_source(self, source_id):
