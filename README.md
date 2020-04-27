@@ -34,6 +34,7 @@ License
 -------
 This package is licensed under the GPLv3 or later license.
 
+                [ ~ Dependencies scanned by PyUp.io ~ ]
 [![Build Status (Travis CI)](https://travis-ci.org/danielhers/ucca.svg?branch=master)](https://travis-ci.org/danielhers/ucca)
 [![Build Status (AppVeyor)](https://ci.appveyor.com/api/projects/status/github/danielhers/ucca?svg=true)](https://ci.appveyor.com/project/danielh/ucca)
 [![Build Status (Docs)](https://readthedocs.org/projects/ucca/badge/?version=latest)](http://ucca.readthedocs.io/en/latest/)
