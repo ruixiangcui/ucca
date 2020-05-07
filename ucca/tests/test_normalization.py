@@ -312,37 +312,41 @@ def expanded_cmr():
     return p
 
 
-# def remote_cmr():
-#     p, l1, terms = create_passage(6)
-#     ps1 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
-#     linker = l1.add_fnode(None, layer1.EdgeTags.Linker)
-#     ps2 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
-#     a1 = l1.add_fnode(ps1, layer1.EdgeTags.Participant)
-#     p1 = l1.add_fnode(ps1, layer1.EdgeTags.Process)
-#     p1.incoming[0].attrib[COORDINATED_MAIN_REL] = True
-#     c1 = l1.add_fnode(p1, layer1.EdgeTags.Center)
-#     n = l1.add_fnode(p1, layer1.EdgeTags.Connector)
-#     c2 = l1.add_fnode(p1, layer1.EdgeTags.Center)
-#     a2 = l1.add_fnode(ps2, layer1.EdgeTags.Participant)
-#     l1.add_remote(ps2, layer1.EdgeTags.Process, p1)
-#     attach_terminals(terms, a1, c1, n, c2, linker, a2)
-#     return p
-#
-#
-# def expanded_remote_cmr():
-#     p, l1, terms = create_passage(6)
-#     ps1 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
-#     linker1 = l1.add_fnode(None, layer1.EdgeTags.Linker)
-#     ps2 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
-#     linker2 = l1.add_fnode(None, layer1.EdgeTags.Linker)
-#     ps3 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
-#     a1 = l1.add_fnode(ps1, layer1.EdgeTags.Participant)
-#     l1.add_remote(ps2, layer1.EdgeTags.Participant, a1)
-#     p1 = l1.add_fnode(ps1, layer1.EdgeTags.Process)
-#     p2 = l1.add_fnode(ps2, layer1.EdgeTags.Process)
-#     a2 = l1.add_fnode(ps2, layer1.EdgeTags.Participant)
-#     attach_terminals(terms, a1, p1, linker1, p2, linker2, a2)
-#     return p
+def remote_cmr():
+    p, l1, terms = create_passage(6)
+    ps1 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
+    linker = l1.add_fnode(None, layer1.EdgeTags.Linker)
+    ps2 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
+    a1 = l1.add_fnode(ps1, layer1.EdgeTags.Participant)
+    p1 = l1.add_fnode(ps1, layer1.EdgeTags.Process)
+    p1.incoming[0].attrib[COORDINATED_MAIN_REL] = True
+    c1 = l1.add_fnode(p1, layer1.EdgeTags.Center)
+    n = l1.add_fnode(p1, layer1.EdgeTags.Connector)
+    c2 = l1.add_fnode(p1, layer1.EdgeTags.Center)
+    a2 = l1.add_fnode(ps2, layer1.EdgeTags.Participant)
+    l1.add_remote(ps2, layer1.EdgeTags.Process, p1)
+    attach_terminals(terms, a1, c1, n, c2, linker, a2)
+    return p
+
+
+def expanded_remote_cmr():
+    p, l1, terms = create_passage(6)
+    ps1 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
+    linker1 = l1.add_fnode(None, layer1.EdgeTags.Linker)
+    ps2 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
+    linker2 = l1.add_fnode(None, layer1.EdgeTags.Linker)
+    ps3 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)
+    # ps4 = l1.add_fnode(None, layer1.EdgeTags.ParallelScene)  # ??? scene with only remotes
+    a1 = l1.add_fnode(ps1, layer1.EdgeTags.Participant)
+    l1.add_remote(ps2, layer1.EdgeTags.Participant, a1)
+    p1 = l1.add_fnode(ps1, layer1.EdgeTags.Process)
+    p2 = l1.add_fnode(ps2, layer1.EdgeTags.Process)
+    a2 = l1.add_fnode(ps3, layer1.EdgeTags.Participant)
+    l1.add_remote(ps3, layer1.EdgeTags.Process, p1)
+    # l1.add_remote(ps4, layer1.EdgeTags.Process, p2)
+    # l1.add_remote(ps4, layer1.EdgeTags.Participant, a2)  # ???
+    attach_terminals(terms, a1, p1, linker1, p2, linker2, a2)
+    return p
 
 
 def normalize_and_compare(unnormalized, normalized, extra=False):
@@ -375,7 +379,7 @@ def normalize_and_compare(unnormalized, normalized, extra=False):
         (unattached_punct_outside_unanalyzable, punct_outside_unanalyzable),
         (cmr_no_attrib, cmr_no_attrib),
         (cmr, expanded_cmr),
-        # (remote_cmr, remote_cmr),
+        (remote_cmr, expanded_remote_cmr),
 ))
 def test_normalize(unnormalized, normalized):
     normalize_and_compare(unnormalized, normalized)

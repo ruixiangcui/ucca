@@ -263,6 +263,9 @@ def split_coordinated_main_rel(node, l1):
             main_rel = edge.child
             centers = main_rel.centers
             assert centers, "%s node without centers: %s" % (COORDINATED_MAIN_REL, main_rel)
+            main_rel_non_centers = [e for e in main_rel.outgoing if ETags.Center not in e.tags]
+            main_rel_incoming = list(main_rel.incoming)
+            main_rel.destroy()
             top = fparent(node)
             if ETags.ParallelScene in node.ftags:
                 top.remove(node)
@@ -271,7 +274,6 @@ def split_coordinated_main_rel(node, l1):
             outgoing = list(node.outgoing)
             scenes = []
             for center in centers:
-                main_rel.remove(center)
                 new_scene = l1.add_fnode(top, ETags.ParallelScene)
                 copy_edge(edge, parent=new_scene, child=center, attrib=attrib)
                 for scene_edge in outgoing:
@@ -280,19 +282,16 @@ def split_coordinated_main_rel(node, l1):
                         # Not the CMR edge itself, and not a category that does not allow multiple parents
                         copy_edge(scene_edge, parent=new_scene, attrib={"remote": True} if scenes else None)
                 scenes.append(new_scene)
-            for main_rel_edge in list(main_rel.outgoing):
+            for main_rel_edge in main_rel_non_centers:
                 tags = main_rel_edge.tags
                 copy_edge(main_rel_edge, parent=top if TOP_CATEGORIES.issuperset(tags) else scenes[0],
                           tag=ETags.Linker if ETags.Connector in main_rel_edge.tags else None)
-                destroy(main_rel_edge)
             for scene_edge in outgoing:
                 if scene_edge.ID != edge.ID:
                     destroy(scene_edge)
-            if main_rel.incoming:
-                for remote_edge in main_rel.incoming:
-                    if remote_edge.attrib.get("remote"):
-                        copy_edge(remote_edge, child=centers[0])
-                main_rel.destroy()
+            for remote_edge in main_rel_incoming:
+                if remote_edge.attrib.get("remote"):
+                    copy_edge(remote_edge, child=centers[0])
             if not node.incoming:
                 node.destroy()
     return node
