@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-import sys
-
 import argparse
 import json
+import sys
+
 import requests
 
 from ucca import convert
@@ -31,7 +31,7 @@ class TaskSubmitter(ServerAccessor):
                     print(task_id, "NOT AN ANNOTATION/REVIEW TASK", file=log_file, sep="\t", flush=True)
                     continue
                 try:
-                    passage = convert.from_json(task)
+                    passage = next(iter(convert.from_json(task)))
                 except ValueError as e:
                     raise ValueError("Failed reading json for task %s:\n%s" % (task_id, json.dumps(task))) from e
                 # validate the task

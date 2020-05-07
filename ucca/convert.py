@@ -1001,7 +1001,7 @@ def from_json(lines, *args, skip_category_mapping=False, by_external_id=False, *
         if skip_category_mapping or not layer0.is_punct(terminal):
             node.add(EdgeTags.Terminal, terminal)
 
-    return passage
+    yield passage
 
 
 IGNORED_EDGE_TAGS = {EdgeTags.Punctuation, EdgeTags.Terminal}
