@@ -106,9 +106,8 @@ class Terminal(core.Node):
 
     def __eq__(self, other):
         """Equals if both of the same Passage, Layer, position, tag & text."""
-        if other.layer.ID != LAYER_ID:
-            return False
-        return (self.root == other.root and self.layer.ID == other.layer.ID
+        return (isinstance(other, Terminal) and other.layer.ID == LAYER_ID
+                and self.root == other.root and self.layer.ID == other.layer.ID
                 and self.position == other.position
                 and self.text == other.text and self.tag == other.tag
                 and self.paragraph == other.paragraph
