@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import sys
-from itertools import count
-
 import argparse
 import os
+import sys
+from itertools import count
+from logging import warning
 
 from ucca.convert import split2sentences, split_passage
 from ucca.ioutil import passage2file, get_passages_with_progress_bar, external_write_mode
@@ -12,6 +12,8 @@ from ucca.normalization import normalize
 from ucca.textutil import extract_terminals
 
 desc = """Parses XML files in UCCA standard format, and writes a passage per sentence."""
+
+NUM_NODES_WARNING = 500  # Warn if a sentence has more than this many nodes
 
 
 class Splitter:
@@ -31,7 +33,7 @@ class Splitter:
         if filename is None:
             return None
         with open(filename, encoding="utf-8") as f:
-            sentences = [l.strip() for l in f]
+            sentences = [line.strip() for line in f]
         return cls(sentences, **kwargs)
 
     def split(self, passage):
@@ -73,6 +75,8 @@ def main(args):
                 passage, remarks=args.remarks, lang=args.lang, ids=map(str, count(i)) if args.enumerate else None):
             i += 1
             outfile = os.path.join(args.outdir, args.prefix + sentence.ID + (".pickle" if args.binary else ".xml"))
+            if len(sentence.nodes) > NUM_NODES_WARNING:
+                warning(f"Sentence {i} in passage {passage.ID} has {len(sentence.nodes)} > {NUM_NODES_WARNING} nodes")
             if args.verbose:
                 with external_write_mode():
                     print(sentence, file=sys.stderr)
