@@ -52,8 +52,6 @@ def match_passage_text(passage, matchers, out):
 
 def alternative_spellings(text):
     yield text
-    yield text.replace("ß", "ss")
-    yield text.replace("ß", "s")
 
 
 def main(args):
