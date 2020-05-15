@@ -70,7 +70,7 @@ class Candidate:
         self.verbose = verbose
         self.terminals = self.edge.child.get_terminals()
         self._terminal_yield = positions(self.terminals)
-        self._terminal_yield_no_punct = positions((self.edge.parent if self.is_implicit else self.edge.child).get_terminals(punct=False))
+        self._terminal_yield_no_punct = positions((self.edge.parent if self.is_implicit() else self.edge.child).get_terminals(punct=False))
         if self.reference is not None:
             self.terminals = [self.reference.by_id(t.ID) for t in self.terminals]
         self.extra = {}
