@@ -1,9 +1,9 @@
-from itertools import repeat
-
 import os
-import pytest
 from functools import partial
 from io import StringIO
+from itertools import repeat
+
+import pytest
 
 from ucca import core, layer0, layer1, convert
 from ucca.evaluation import evaluate, LABELED, UNLABELED, WEAK_LABELED
@@ -330,7 +330,7 @@ def test_evaluate(create1, create2, f1, units, errors):
     p1 = create1()
     p2 = create2()
     validation_errors_before = [list(validate(p, linkage=False)) for p in (p1, p2)]
-    scores = evaluate(p1, p2, units=units, errors=errors)
+    scores = evaluate(p1, p2, units=units, errors=errors, verbose=True)
     validation_errors_after = [list(validate(p, linkage=False)) for p in (p1, p2)]
     for before, after in zip(validation_errors_before, validation_errors_after):
         if not before:
