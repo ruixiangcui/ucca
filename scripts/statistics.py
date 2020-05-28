@@ -13,7 +13,9 @@ desc = """Prints statistics on UCCA passages"""
 
 def main(args):
     df = pd.DataFrame(index=args.directories, columns=["sentences", "tokens", "nodes", "discontinuous", "reentrant",
-                                                       "implicit", "edges", "primary", "remote"])
+                                                       "implicit", "edges", "primary", "remote",
+                                                       "imp_deictic","imp_generic", "imp_genre_based",
+                                                       "imp_type_identifiable","imp_non_specific", "imp_iterated_set"])
     df.fillna(0, inplace=True)
     for i, directory in enumerate(args.directories):
         row = df.loc[directory]
@@ -31,11 +33,18 @@ def main(args):
             row["primary"] += remote_counter[False]
             row["remote"] += remote_counter[True]
             row["implicit"] += sum(1 for n in l1.all if n.attrib.get("implicit"))
+            row["imp_deictic"] += sum(1 for n in non_terminals for e in n if any(c.tag == "Deictic" for c in e.categories))
+            row["imp_generic"] += sum(1 for n in non_terminals for e in n if any(c.tag == "Generic" for c in e.categories))
+            row["imp_genre_based"] += sum(1 for n in non_terminals for e in n if any(c.tag == "Genre-based" for c in e.categories))
+            row["imp_type_identifiable"] += sum(1 for n in non_terminals for e in n if any(c.tag == "Type-identifiable" for c in e.categories))
+            row["imp_non_specific"] += sum(1 for n in non_terminals for e in n if any(c.tag == "Arbitrary/Nonspecific" for c in e.categories))
+            row["imp_iterated_set"] += sum(1 for n in non_terminals for e in n if any(c.tag == "Iterated/repeated/set" for c in e.categories))
+
 
     # Change to percentages
     df["discontinuous"] *= 100. / df["nodes"]
     df["reentrant"] *= 100. / df["nodes"]
-    df["implicit"] *= 100. / df["nodes"]
+    # df["implicit"] *= 100. / df["nodes"]
     df["primary"] *= 100. / df["edges"]
     df["remote"] *= 100. / df["edges"]
 

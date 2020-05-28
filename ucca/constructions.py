@@ -183,7 +183,7 @@ CONSTRUCTIONS = (
                  lambda c: "ADJ" in c.pos and "NOUN" not in c.pos and c.is_predicate()),
     Construction("expletives", "Expletives",
                  lambda c: c.tokens <= {"it", "there"} and EdgeTags.Function in c.edge.tags),
-    Construction("implicit", "Implicit edges", Candidate.is_implicit, default=True),
+    Construction("implicit", "Implicit argument", Candidate.is_implicit, default=True),
     Categories()
 )
 PRIMARY = CONSTRUCTIONS[0]
