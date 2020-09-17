@@ -103,7 +103,7 @@ class Evaluator:
                     mutual_tags[y] = intersection
         if counter is not None:  # for confusion matrix / error counter
             for y in m1.keys() | m2.keys():  # common yields (keys), but perhaps different tags (values)
-                tags = [sorted(set(t for c in m.get(y, ()) if not c.is_unary_child for t in c.edge.tags))
+                tags = [sorted(set(t for c in m.get(y, ()) if not c.is_unary_child or c.is_implicit() for t in c.edge.tags))
                         for m in (m1, m2)]  # the tags for the yield in each of the two passages
                 counter[tuple("|".join(t) or "<UNMATCHED>" for t in tags)] += 1
 
@@ -240,30 +240,32 @@ class EvaluatorResults:
         print(**kwargs)
 
     def print_confusion_matrix(self, prefix=None, sep=None, as_table=False, **kwargs):
-        primary = self[PRIMARY]
-        if primary.errors:
-            errors = primary.errors.most_common()
-            if as_table:
-                table_sep = sep if sep else "\t"
-                if not sep:
-                    print("\n")
-                print("%sConfusion Matrix:" % ("" if prefix is None else (prefix + ", ")), **kwargs)
-                y_labels = sorted(set(x[0][1] for x in errors))
-                print("", *y_labels, sep=table_sep, **kwargs)
-                for x, x_errors in groupby(sorted(errors), key=lambda x: x[0][0]):
-                    errors_by_y = Counter()
-                    for (_, y), f in x_errors:
-                        errors_by_y[y] += f
-                    print(x, *[errors_by_y.get(y, 0) for y in y_labels], sep=table_sep, **kwargs)
-            elif sep:
-                print(sep.join(("guessed", "ref", "count")), **kwargs)
-                for error, freq in errors:
-                    print(sep.join(error + (str(freq),)), **kwargs)
-            else:
-                for error, freq in errors:
-                    l1 = max(len(e1) for e1, _ in primary.errors)
-                    l2 = max(len(e2) for _, e2 in primary.errors)
-                    print("%-*s %-*s %d" % (l1, error[0], l2, error[1], freq), **kwargs)
+        for construction, result in self.results.items():
+
+            if result.errors:
+                errors = result.errors.most_common()
+                if as_table:
+                    table_sep = sep if sep else "\t"
+                    if not sep:
+                        print("\n")
+                    print(construction)
+                    print("%sConfusion Matrix:" % ("" if prefix is None else (prefix + ", ")), **kwargs)
+                    y_labels = sorted(set(x[0][1] for x in errors))
+                    print("", *y_labels, sep=table_sep, **kwargs)
+                    for x, x_errors in groupby(sorted(errors), key=lambda x: x[0][0]):
+                        errors_by_y = Counter()
+                        for (_, y), f in x_errors:
+                            errors_by_y[y] += f
+                        print(x, *[errors_by_y.get(y, 0) for y in y_labels], sep=table_sep, **kwargs)
+                elif sep:
+                    print(sep.join(("guessed", "ref", "count")), **kwargs)
+                    for error, freq in errors:
+                        print(sep.join(error + (str(freq),)), **kwargs)
+                else:
+                    for error, freq in errors:
+                        l1 = max(len(e1) for e1, _ in result.errors)
+                        l2 = max(len(e2) for _, e2 in result.errors)
+                        print("%-*s %-*s %d" % (l1, error[0], l2, error[1], freq), **kwargs)
 
     @classmethod
     def aggregate(cls, results):
