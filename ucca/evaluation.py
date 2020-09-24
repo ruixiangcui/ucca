@@ -99,12 +99,14 @@ class Evaluator:
                 if eval_type == WEAK_LABELED:
                     tags[0] = expand_equivalents(tags[0])
                 intersection = set.intersection(*tags)
-                if intersection:  # non-empty intersection
+                if tags[0] == tags[1]:  # non-empty intersection
                     mutual_tags[y] = intersection
         if counter is not None:  # for confusion matrix / error counter
             for y in m1.keys() | m2.keys():  # common yields (keys), but perhaps different tags (values)
                 tags = [sorted(set(t for c in m.get(y, ()) if not c.is_unary_child or c.is_implicit() for t in c.edge.tags))
                         for m in (m1, m2)]  # the tags for the yield in each of the two passages
+                if "Arbitrary/Nonspecific" in tags[1]:
+                    print("m2", m2)
                 counter[tuple("|".join(t) or "<UNMATCHED>" for t in tags)] += 1
 
     def get_scores(self, p1, p2, eval_type, r=None):
@@ -241,7 +243,6 @@ class EvaluatorResults:
 
     def print_confusion_matrix(self, prefix=None, sep=None, as_table=False, **kwargs):
         for construction, result in self.results.items():
-
             if result.errors:
                 errors = result.errors.most_common()
                 if as_table:
