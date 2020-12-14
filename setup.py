@@ -22,16 +22,8 @@ for requirements_file in glob("requirements.*txt"):
     with open(requirements_file) as f:
         (extras_require.setdefault(suffix, []) if suffix else install_requires).extend(f.read().splitlines())
 
-try:
-    import pypandoc
-    try:
-        pypandoc.convert_file("README.md", "rst", outputfile="README.rst")
-    except (IOError, ImportError, RuntimeError):
-        pass
-    long_description = pypandoc.convert_file("README.md", "rst")
-except (IOError, ImportError, RuntimeError):
-    long_description = ""
-
+with open("README.md") as f:
+    long_description = f.read().splitlines()
 
 setup(name="UCCA",
       version=VERSION,
