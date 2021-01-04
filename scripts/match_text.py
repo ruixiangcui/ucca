@@ -50,9 +50,14 @@ def match_passage_text(passage, matchers, out):
         print(passage.ID, match, sep="\t", file=out)
 
 
+def alternative_spellings(text):
+    yield text
+
+
 def main(args):
-    matchers = [CandidateMatcher(line) for line in tqdm(list(gen_lines(args.text)),
-                                                        desc="Indexing " + args.text, unit=" lines")]
+    matchers = [CandidateMatcher(spelling) for line in tqdm(list(gen_lines(args.text)),
+                                                            desc="Indexing " + args.text, unit=" lines")
+                for spelling in alternative_spellings(line)]
     out = open(args.out, "w", encoding="utf-8") if args.out else sys.stdout
     for p in get_passages_with_progress_bar(args.filenames, desc="Matching", converters={}):
         match_passage_text(p, matchers, out)

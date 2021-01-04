@@ -70,7 +70,7 @@ class Candidate:
         self.verbose = verbose
         self.terminals = self.edge.child.get_terminals()
         self._terminal_yield = positions(self.terminals)
-        self._terminal_yield_no_punct = positions((self.edge.parent if self.is_implicit else self.edge.child).get_terminals(punct=False))
+        self._terminal_yield_no_punct = positions((self.edge.parent if self.is_implicit() else self.edge.child).get_terminals(punct=False))
         if self.reference is not None:
             self.terminals = [self.reference.by_id(t.ID) for t in self.terminals]
         self.extra = {}
@@ -176,6 +176,7 @@ CONSTRUCTIONS = (
     Construction("mwe", "Multi-word expressions",
                  lambda c: c.is_primary() and c.edge.child.tag == NodeTags.Foundational and len(
                      c.edge.child.terminals) > 1),  # Unanalyzable unit
+    Construction("main_rel", "Main relations (predicates)", Candidate.is_predicate),
     Construction("pred_nouns", "Predicate nouns",
                  lambda c: "ADJ" not in c.pos and "NOUN" in c.pos and c.is_predicate()),
     Construction("pred_adjs", "Predicate adjectives",

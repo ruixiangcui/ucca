@@ -101,10 +101,10 @@ class Evaluator:
                 intersection = set.intersection(*tags)
                 if intersection:  # non-empty intersection
                     mutual_tags[y] = intersection
-        if counter is not None:
-            for y in m1.keys() | m2.keys():
+        if counter is not None:  # for confusion matrix / error counter
+            for y in m1.keys() | m2.keys():  # common yields (keys), but perhaps different tags (values)
                 tags = [sorted(set(t for c in m.get(y, ()) if not c.is_unary_child for t in c.edge.tags))
-                        for m in (m1, m2)]
+                        for m in (m1, m2)]  # the tags for the yield in each of the two passages
                 counter[tuple("|".join(t) or "<UNMATCHED>" for t in tags)] += 1
 
     def get_scores(self, p1, p2, eval_type, r=None):
@@ -136,7 +136,10 @@ class Evaluator:
                 self.find_mutuals(*yield_cands, eval_type=eval_type, mutual_tags=mutual.setdefault(construction, {}),
                                   counter=None if counters is None else counters.setdefault(construction, Counter()))
 
-        only = [{c: {y: tags for y, tags in d.items() if y not in mutual[c]} for c, d in m.items()} for m in maps]
+        only = [{construction: {terminal_yield: set.union(*(set(candidate.edge.tags) for candidate in candidates))
+                                for terminal_yield, candidates in candidates_per_yield.items()
+                                if terminal_yield not in mutual[construction]}
+                 for construction, candidates_per_yield in m.items()} for m in maps]
         res = EvaluatorResults((c, SummaryStatistics(len(mutual[c]), len(only[0].get(c, ())), len(only[1].get(c, ())),
                                                      None if counters is None else counters.get(c))) for c in mutual)
         if self.verbose:

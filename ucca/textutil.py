@@ -293,7 +293,7 @@ def set_docs(annotated, as_array, as_extra, lang, vocab, replace, verbose):
 
 
 SENTENCE_END_MARKS = ('.', '?', '!')
-QUOTES = ("'", '"', "`")
+QUOTES = ("'", '"', "`", "»", "«")
 
 
 def break2sentences(passage, lang="en", *args, **kwargs):
