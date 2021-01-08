@@ -19,16 +19,48 @@ def main(args):
         tree = ET.parse(fn)
         root = tree.getroot()
         to_remove = []
+        old_to_new_ID = {}
+
         for node in root.getiterator():
             if node.tag == 'layer' and node.attrib.get('layerID',None) == "0":
                 layer0 = node
+                break
+
+        last_parag = "1"
+        position_in_paragraph = 0
+        position = 1
+        for node in layer0.getiterator():
             if node.tag == 'node':
+                new_ID = '0.' + str(position)
+                old_to_new_ID[node.attrib['ID']] = new_ID
+                node.attrib['ID'] = new_ID
                 for e in node.iter():
                     if e.tag == 'attributes':
                         if e.attrib.get('text',None) in ['','<br>']:
                             to_remove.append(node)
+                        else:
+                            position += 1
+                            if e.attrib.get('paragraph', "0") != last_parag:
+                                position_in_paragraph = 0
+                                last_parag = e.attrib.get('paragraph', "0")
+                            position_in_paragraph += 1
+                            e.attrib['paragraph_position'] = str(position_in_paragraph)
+
         for node in to_remove:
             layer0.remove(node)
+
+        # fixing layer1
+        for node in root.getiterator():
+            if node.tag == 'layer' and node.attrib.get('layerID',None) == "1":
+                layer1 = node
+                break
+
+        for node in layer1.getiterator():
+            if node.tag == 'edge':
+                if node.attrib.get("toID",None) in old_to_new_ID.keys():
+                    node.attrib["toID"] = old_to_new_ID[node.attrib["toID"]]
+
+        P = convert.from_standard(root)
         xml_str = tostring(root).decode()
         site_filename = os.path.join(args.outdir,ntpath.basename(fn))
         f = open(site_filename,'w')
