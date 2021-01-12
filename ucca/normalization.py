@@ -178,8 +178,12 @@ def detach_punct(l1):
         if node.tag == L1Tags.Punctuation:
             destroy(node)
         else:
+            to_remove = []
             for edge in node:
                 if edge.child.tag == L0Tags.Punct:
+                    to_remove.append(edge)
+            if len(node) < len(to_remove):  # Detach only if we are not making the node childless
+                for edge in to_remove:
                     destroy(edge)
 
 
