@@ -1112,15 +1112,18 @@ def to_json(passage, *args, return_dict=False, tok_task=None, all_categories=Non
     def _tree_id_key(u):
         return tuple(map(int, u["tree_id"].split("-")))
 
+    def _parent_id(u):
+        return _tree_id_key(u)[:-1]
+
     annotation_units = sorted(annotation_units, key=_tree_id_key)
     if tokens and annotation_units:
-        for _, units in groupby(annotation_units[1:], key=lambda u: _tree_id_key(u)[:-1]):
+        for _, units in groupby(sorted(annotation_units[1:], key=_parent_id), key=_parent_id):
             units = list(units)
             start_indices = [min([t["start_index"] for t in tokens
                                   if any(s["id"] == t["id"] for s in u["children_tokens"])] or [-1]) for u in units]
-            assert all(i == -1 or i < j for i, j in zip(start_indices[:-1], start_indices[1:])), \
-                "Siblings are not correctly ordered by their minimal start_index: " +\
-                ", ".join(u["comment"] for u in units)
+            assert all(i == -1 or i <= j for i, j in zip(start_indices[:-1], start_indices[1:])), \
+                "Siblings {} are not correctly ordered by their minimal start_index: {}".format(
+                    ", ".join(u["tree_id"] for u in units), start_indices)
 
     d = dict(tokens=tokens, annotation_units=annotation_units, manager_comment=passage.ID)
     return d if return_dict else json.dumps(d).splitlines()
@@ -1133,10 +1136,13 @@ def file2passage(filename):
     """
     methods = [pickle2passage, xml2passage]
     _, ext = os.path.splitext(filename)
+    ext = ext.lower()
     if ext == ".xml":
         del methods[0]
     elif ext == ".pickle":
         del methods[1]
+    else:
+        raise IOError("file2passage accepts only 'xml' and 'pickle' files.")
     exception = None
     for method in methods:
         try:
